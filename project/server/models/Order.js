@@ -1,17 +1,38 @@
 const mongoose = require('mongoose');
 
-const OrderItemSchema = new mongoose.Schema({
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-    quantity: { type: Number, required: true },
-}, {_id: false});
-
-
-const OrderSchema = new mongoose.Schema({
-    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', default: null },
-    items: [OrderItemSchema],
-    total: { type: Number, required: true },
-    isPaid: { type: Boolean, default: false },
-    date: { type: Date, default: Date.now },
+const orderSchema = new mongoose.Schema({
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId, // <-- ESTE É CRÍTICO
+    ref: 'Customer', // <-- E ESTE
+    required: false, // Pode ser null se a venda não tiver cliente associado
+  },
+  items: [
+    {
+      productId: {
+        type: mongoose.Schema.Types.ObjectId, // <-- ESTE É CRÍTICO
+        ref: 'Product', // <-- E ESTE
+        required: true,
+      },
+      quantity: {
+        type: Number,
+        required: true,
+        min: 1,
+      },
+    },
+  ],
+  total: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  date: {
+    type: Date,
+    default: Date.now,
+  },
+  isPaid: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-module.exports = mongoose.model('Order', OrderSchema);
+module.exports = mongoose.model('Order', orderSchema);
