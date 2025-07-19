@@ -8,6 +8,7 @@ const cors = require('cors');
 const productRoutes = require('./routes/products');
 const customerRoutes = require('./routes/customers');
 const orderRoutes = require('./routes/orders');
+const debtRoutes = require('./routes/debts'); // <-- NOVA LINHA
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -34,6 +35,7 @@ app.get('/', (req, res) => {
 app.use('/api/products', productRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/debts', debtRoutes); // <-- NOVA LINHA
 
 // Inicia o servidor
 app.listen(PORT, () => {

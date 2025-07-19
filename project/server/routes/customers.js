@@ -8,7 +8,9 @@ router.get('/', async (req, res) => {
     const customers = await Customer.find();
     res.json(customers);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("ERRO CRÍTICO NA ROTA GET /api/customers:", err.message); // Log detalhado
+    console.error(err.stack); // Mostra a pilha de chamadas para depuração
+    res.status(500).json({ message: "Erro interno do servidor ao buscar clientes." });
   }
 });
 
@@ -21,6 +23,8 @@ router.post('/', async (req, res) => {
     const newCustomer = await customer.save();
     res.status(201).json(newCustomer);
   } catch (err) {
+    console.error("ERRO ao adicionar cliente (POST /api/customers):", err.message);
+    console.error(err.stack);
     res.status(400).json({ message: err.message });
   }
 });
@@ -38,6 +42,8 @@ router.put('/:id', async (req, res) => {
     const updatedCustomer = await customer.save();
     res.json(updatedCustomer);
   } catch (err) {
+    console.error("ERRO ao atualizar cliente (PUT /api/customers/:id):", err.message);
+    console.error(err.stack);
     res.status(400).json({ message: err.message });
   }
 });
@@ -49,9 +55,11 @@ router.delete('/:id', async (req, res) => {
     if (!customer) {
       return res.status(404).json({ message: 'Cliente não encontrado' });
     }
-    await Customer.deleteOne({ _id: req.params.id }); // Use deleteOne
+    await Customer.deleteOne({ _id: req.params.id });
     res.json({ message: 'Cliente excluído com sucesso' });
   } catch (err) {
+    console.error("ERRO ao deletar cliente (DELETE /api/customers/:id):", err.message);
+    console.error(err.stack);
     res.status(500).json({ message: err.message });
   }
 });

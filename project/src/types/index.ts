@@ -4,12 +4,17 @@ export interface Product {
   price: number;
 }
 
-export interface Customer {
-  _id: string; // Garanta que é _id
-  name: string;
-  hasDebt: boolean;
+export interface Debt { // <-- NOVO TIPO
+  _id: string;
+  customerId: string; // O ID do cliente a quem a dívida pertence
+  totalDebt: number;
 }
 
+export interface Customer {
+  _id: string;
+  name: string;
+  totalDebt?: number; // Opcional, para passar o valor da dívida junto ao cliente no frontend
+}
 export interface OrderItem {
   productId: string; // Este é o _id do produto no banco
   quantity: number;

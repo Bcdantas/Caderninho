@@ -1,37 +1,42 @@
 import React, { useState } from 'react';
 import { DollarSign, Eye, XCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Customer, Order } from '../types';
+import { Customer, Order, Debt } from '../types'; // Importe Debt
 
 const DebtList: React.FC = () => {
-  const { customers, orders, getProductById, markOrderAsPaid } = useApp();
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const { customers, orders, getProductById, markOrderAsPaid, debts } = useApp(); // Pegue 'debts' do contexto
+  const [selectedCustomerDebt, setSelectedCustomerDebt] = useState<Debt | null>(null); // Use Debt para o estado
 
-  // Filtra os clientes que têm hasDebt = true
-  const customersWithDebt = customers.filter(c => c.hasDebt);
+  // customersWithDebt agora é construído a partir da coleção 'debts'
+  const customersWithDebt = debts.filter(d => d.totalDebt > 0).map(debt => {
+    const customer = customers.find(c => c._id === debt.customerId);
+    // Adiciona o totalDebt diretamente ao objeto do cliente para exibição
+    // Note: 'hasDebt: true' é uma propriedade virtual para indicar que ele está na lista de devedores
+    return customer ? { ...customer, hasDebt: true, totalDebt: debt.totalDebt } : undefined;
+  }).filter(Boolean) as (Customer & { totalDebt: number })[]; // Filtra undefined e garante o tipo
 
-  // Obtém os pedidos não pagos de um cliente específico
   const getCustomerDebts = (customerId: string) => {
+    // Filtre os pedidos não pagos para este cliente
     return orders.filter(
       (order) => order.customerId === customerId && !order.isPaid
     );
   };
 
-  // Calcula o total da dívida de um cliente
+  // calculateCustomerTotalDebt agora lê o total da coleção 'debts'
   const calculateCustomerTotalDebt = (customerId: string) => {
-    const debts = getCustomerDebts(customerId);
-    return debts.reduce((total, order) => total + order.total, 0);
+    const customerDebtEntry = debts.find(d => d.customerId === customerId);
+    return customerDebtEntry ? customerDebtEntry.totalDebt : 0;
   };
 
-  // Lidar com a marcação de um pedido específico como pago
   const handleMarkDebtAsPaid = async (orderId: string) => {
     if (window.confirm('Tem certeza que deseja marcar este pedido como pago?')) {
-      await markOrderAsPaid(orderId); // Esta função já chama refreshData internamente
-      // Não precisa de setCustomers ou setOrders aqui, pois refreshData fará isso
-      if (selectedCustomer) { // Se um cliente está selecionado, reavalie as dívidas dele
-        const remainingDebts = getCustomerDebts(selectedCustomer._id);
-        if (remainingDebts.length === 0) {
-          setSelectedCustomer(null); // Sai da visualização de dívidas do cliente se todas foram pagas
+      await markOrderAsPaid(orderId); // Esta função já chama refreshData internamente no AppContext
+      // Após marcar como pago, o refreshData do AppContext vai atualizar as 'debts'
+      // Re-checa se o cliente selecionado ainda tem dívidas para sair da visualização se zerou
+      if (selectedCustomerDebt) {
+        const updatedDebtEntry = debts.find(d => d.customerId === selectedCustomerDebt.customerId);
+        if (!updatedDebtEntry || updatedDebtEntry.totalDebt === 0) {
+          setSelectedCustomerDebt(null); // Sai da visualização se a dívida foi zerada
         }
       }
     }
@@ -41,29 +46,29 @@ const DebtList: React.FC = () => {
     <div>
       <h2 className="text-xl font-bold mb-4">Contas Pendentes</h2>
 
-      {selectedCustomer ? (
+      {selectedCustomerDebt ? ( // Usar selectedCustomerDebt para determinar a exibição detalhada
         <div className="bg-white p-4 rounded-lg shadow-md">
           <h3 className="text-2xl font-bold mb-4 flex items-center">
-            <button onClick={() => setSelectedCustomer(null)} className="mr-2 text-gray-500 hover:text-gray-700">
+            <button onClick={() => setSelectedCustomerDebt(null)} className="mr-2 text-gray-500 hover:text-gray-700">
               &larr;
             </button>
-            {selectedCustomer.name}
+            {customers.find(c => c._id === selectedCustomerDebt.customerId)?.name} {/* Busca o nome do cliente pelo customerId da dívida */}
             <span className="ml-auto text-amber-700">
-              Total: R$ {calculateCustomerTotalDebt(selectedCustomer._id).toFixed(2)}
+              Total: R$ {selectedCustomerDebt.totalDebt.toFixed(2)} {/* Mostra totalDebt direto do objeto Debt */}
             </span>
           </h3>
 
-          {getCustomerDebts(selectedCustomer._id).length === 0 ? (
+          {getCustomerDebts(selectedCustomerDebt.customerId).length === 0 ? (
             <p className="text-center py-4">Nenhum pedido pendente para este cliente.</p>
           ) : (
             <div className="space-y-4">
-              {getCustomerDebts(selectedCustomer._id).map((order) => (
+              {getCustomerDebts(selectedCustomerDebt.customerId).map((order) => (
                 <div key={order._id} className="border border-red-200 bg-red-50 p-3 rounded-lg flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-red-800">Pedido em {new Date(order.date).toLocaleDateString()}</p>
                     <ul className="list-disc list-inside text-red-700 text-sm">
                       {order.items.map(item => {
-                        const product = getProductById(item.productId);
+                        const product = getProductById(item.productId); // Continua buscando produto no AppContext
                         return <li key={item.productId}>{product ? product.name : 'Produto Desconhecido'} (x{item.quantity})</li>;
                       })}
                     </ul>
@@ -82,6 +87,7 @@ const DebtList: React.FC = () => {
           )}
         </div>
       ) : (
+        // Visualização dos cards de clientes com dívida
         <>
           {customersWithDebt.length === 0 ? (
             <div className="text-center py-8 bg-white rounded-lg shadow">
@@ -96,15 +102,15 @@ const DebtList: React.FC = () => {
                 >
                   <h3 className="font-bold text-lg text-red-800">{customer.name}</h3>
                   <p className="text-gray-600">
-                    Dívida Total: <span className="font-bold text-red-700">R$ {calculateCustomerTotalDebt(customer._id).toFixed(2)}</span>
+                    Dívida Total: <span className="font-bold text-red-700">R$ {customer.totalDebt?.toFixed(2) || '0.00'}</span> {/* Usa totalDebt do cliente populado */}
                   </p>
                   <div className="flex justify-end space-x-2 mt-3">
                     <button
-                      onClick={() => setSelectedCustomer(customer)}
+                      onClick={() => setSelectedCustomerDebt(debts.find(d => d.customerId === customer._id) || null)} // Passa o objeto Debt real para o estado
                       className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
                       aria-label="Ver detalhes"
                     >
-                      <Eye size={18} />
+                          <Eye size={18} />
                     </button>
                   </div>
                 </div>

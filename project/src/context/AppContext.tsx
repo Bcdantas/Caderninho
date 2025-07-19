@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Product, Customer, Order, AppTab, OrderItem } from '../types';
+import { Product, Customer, Order, AppTab, OrderItem, Debt } from '../types'; // Importe Debt
 
 interface AppContextType {
   products: Product[];
   customers: Customer[];
   orders: Order[];
+  debts: Debt[]; // <-- NOVO ESTADO AQUI
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
   // Métodos CRUD para Produtos
@@ -24,7 +25,7 @@ interface AppContextType {
   getProductById: (id: string) => Product | undefined;
   getCustomerById: (id: string) => Customer | undefined;
   calculateOrderTotal: (items: OrderItem[]) => number;
-  getCustomersWithDebt: () => Customer[];
+  getCustomersWithDebt: () => Customer[]; // Manter a assinatura, mas a implementação usa 'debts'
   refreshData: () => Promise<void>; // Método para recarregar todos os dados
 }
 
@@ -37,28 +38,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]); // <-- NOVO ESTADO INICIALIZADO
   const [activeTab, setActiveTab] = useState<AppTab>('orders');
 
-  // Função para carregar todos os dados do backend
+  // Função para carregar TODOS os dados do backend, incluindo dívidas
   const refreshData = useCallback(async () => {
     try {
-      const [productsRes, customersRes, ordersRes] = await Promise.all([
+      const [productsRes, customersRes, ordersRes, debtsRes] = await Promise.all([ // <-- Adicionado debtsRes
         fetch(`${API_BASE_URL}/products`),
         fetch(`${API_BASE_URL}/customers`),
         fetch(`${API_BASE_URL}/orders`),
+        fetch(`${API_BASE_URL}/debts`), // <-- BUSCA A NOVA ROTA DE DÍVIDAS AQUI
       ]);
 
-      if (!productsRes.ok || !customersRes.ok || !ordersRes.ok) {
+      if (!productsRes.ok || !customersRes.ok || !ordersRes.ok || !debtsRes.ok) { // <-- Verifica debtsRes
         throw new Error('Falha ao buscar dados da API');
       }
 
       const fetchedProducts = await productsRes.json();
       const fetchedCustomers = await customersRes.json();
       const fetchedOrders = await ordersRes.json();
+      const fetchedDebts = await debtsRes.json(); // <-- Pega os dados de dívidas
 
       setProducts(fetchedProducts);
       setCustomers(fetchedCustomers);
       setOrders(fetchedOrders);
+      setDebts(fetchedDebts); // <-- DEFINE O ESTADO DE DÍVIDAS
     } catch (error) {
       console.error('Erro ao buscar dados da API:', error);
       // Aqui você pode adicionar uma notificação ao usuário sobre o erro
@@ -126,6 +131,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // --- Métodos de Clientes (com chamadas à API) ---
+  // A lógica de hasDebt foi movida para a coleção Debt
   const addCustomer = async (customer: Omit<Customer, '_id' | 'hasDebt'>): Promise<Customer | undefined> => {
     try {
       const res = await fetch(`${API_BASE_URL}/customers`, {
@@ -180,13 +186,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return customers.find((c) => c._id === id);
   };
 
-  const getCustomersWithDebt = () => {
-    return customers.filter((c) => c.hasDebt);
-  };
+  // getCustomersWithDebt agora usa a nova coleção 'debts' para determinar quem tem dívida
+const getCustomersWithDebt = useCallback(() => {
+  return debts
+    .filter(debt => debt.totalDebt > 0)
+    .map(debt => {
+      const customer = customers.find(c => c._id === debt.customerId);
+      // Retorna o objeto de cliente com um hasDebt *virtual* e o totalDebt REAL da coleção 'debts'
+      return customer ? { ...customer, hasDebt: true, totalDebt: debt.totalDebt } : undefined;
+    })
+    .filter(Boolean) as (Customer & { totalDebt: number })[]; // Cast para garantir o tipo
+
+}, [debts, customers]);
+
 
   // --- Métodos de Pedidos (com chamadas à API) ---
   const calculateOrderTotal = (items: OrderItem[]) => {
     return items.reduce((total, item) => {
+      // Busca o produto no estado 'products' do AppContext
       const product = products.find(p => p._id === item.productId);
       return total + (product ? product.price * item.quantity : 0);
     }, 0);
@@ -202,7 +219,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok) throw new Error('Falha ao adicionar pedido');
       const newOrder = await res.json();
       setOrders((prev) => [...prev, newOrder]);
-      refreshData(); // Chamada importante para atualizar clientes e pedidos no estado global
+      refreshData(); // Chamada importante para atualizar TODOS os estados (incluindo 'debts' e 'customers')
       return newOrder;
     } catch (error) {
       console.error('Erro ao adicionar pedido:', error);
@@ -220,7 +237,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok) throw new Error('Falha ao atualizar pedido');
       const data = await res.json();
       setOrders((prev) => prev.map((o) => (o._id === data._id ? data : o)));
-      refreshData(); // Chamada importante para atualizar clientes e pedidos no estado global
+      refreshData(); // Chamada importante para atualizar TODOS os estados
       return data;
     } catch (error) {
       console.error('Erro ao atualizar pedido:', error);
@@ -235,7 +252,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => o._id !== id));
-        refreshData(); // Chamada importante para atualizar clientes e pedidos no estado global
+        refreshData(); // Chamada importante para atualizar TODOS os estados
         return true;
       }
       throw new Error('Falha ao deletar pedido');
@@ -254,7 +271,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok) throw new Error('Falha ao marcar pedido como pago');
       const data = await res.json();
       setOrders((prev) => prev.map((o) => (o._id === data._id ? data : o)));
-      refreshData(); // Chamada importante para atualizar clientes e pedidos no estado global
+      refreshData(); // Chamada importante para atualizar TODOS os estados
       return data;
     } catch (error) {
       console.error('Erro ao marcar pedido como pago:', error);
@@ -262,10 +279,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // --- Valor do Contexto ---
   const value = {
     products,
     customers,
     orders,
+    debts, // <-- NOVO VALOR AQUI
     activeTab,
     setActiveTab,
     addProduct,
