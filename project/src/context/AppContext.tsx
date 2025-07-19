@@ -25,11 +25,12 @@ interface AppContextType {
   getCustomerById: (id: string) => Customer | undefined;
   calculateOrderTotal: (items: OrderItem[]) => number;
   getCustomersWithDebt: () => Customer[];
-  refreshData: () => Promise<void>;
+  refreshData: () => Promise<void>; // Método para recarregar todos os dados
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// URL base do nosso backend
 const API_BASE_URL = 'http://localhost:4000/api';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -38,6 +39,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<AppTab>('orders');
 
+  // Função para carregar todos os dados do backend
   const refreshData = useCallback(async () => {
     try {
       const [productsRes, customersRes, ordersRes] = await Promise.all([
@@ -59,16 +61,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setOrders(fetchedOrders);
     } catch (error) {
       console.error('Erro ao buscar dados da API:', error);
+      // Aqui você pode adicionar uma notificação ao usuário sobre o erro
     }
-  }, []);
+  }, []); // Dependência vazia, pois refreshData não depende de props/state diretamente
 
+  // Carrega os dados na primeira vez que o componente é montado
   useEffect(() => {
     refreshData();
   }, [refreshData]);
 
-  // Resto das suas funções (addProduct, updateProduct, etc.) devem estar como no meu último envio.
-  // Apenas garantindo que addOrder, updateOrder, deleteOrder, markOrderAsPaid chamem refreshData() no final.
-
+  // --- Métodos de Produtos (com chamadas à API) ---
   const addProduct = async (product: Omit<Product, '_id'>): Promise<Product | undefined> => {
     try {
       const res = await fetch(`${API_BASE_URL}/products`, {
@@ -79,13 +81,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok) throw new Error('Falha ao adicionar produto');
       const newProduct = await res.json();
       setProducts((prev) => [...prev, newProduct]);
-      refreshData();
       return newProduct;
     } catch (error) {
       console.error('Erro ao adicionar produto:', error);
       return undefined;
     }
   };
+
   const updateProduct = async (updatedProduct: Product): Promise<Product | undefined> => {
     try {
       const res = await fetch(`${API_BASE_URL}/products/${updatedProduct._id}`, {
@@ -96,13 +98,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok) throw new Error('Falha ao atualizar produto');
       const data = await res.json();
       setProducts((prev) => prev.map((p) => (p._id === data._id ? data : p)));
-      refreshData();
       return data;
     } catch (error) {
       console.error('Erro ao atualizar produto:', error);
       return undefined;
     }
   };
+
   const deleteProduct = async (id: string): Promise<boolean> => {
     try {
       const res = await fetch(`${API_BASE_URL}/products/${id}`, {
@@ -110,7 +112,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res.ok) {
         setProducts((prev) => prev.filter((p) => p._id !== id));
-        refreshData();
         return true;
       }
       throw new Error('Falha ao deletar produto');
@@ -119,8 +120,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
   };
-  const getProductById = (id: string) => { return products.find((p) => p._id === id); };
 
+  const getProductById = (id: string) => {
+    return products.find((p) => p._id === id);
+  };
+
+  // --- Métodos de Clientes (com chamadas à API) ---
   const addCustomer = async (customer: Omit<Customer, '_id' | 'hasDebt'>): Promise<Customer | undefined> => {
     try {
       const res = await fetch(`${API_BASE_URL}/customers`, {
@@ -131,13 +136,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok) throw new Error('Falha ao adicionar cliente');
       const newCustomer = await res.json();
       setCustomers((prev) => [...prev, newCustomer]);
-      refreshData();
       return newCustomer;
     } catch (error) {
       console.error('Erro ao adicionar cliente:', error);
       return undefined;
     }
   };
+
   const updateCustomer = async (updatedCustomer: Customer): Promise<Customer | undefined> => {
     try {
       const res = await fetch(`${API_BASE_URL}/customers/${updatedCustomer._id}`, {
@@ -148,13 +153,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok) throw new Error('Falha ao atualizar cliente');
       const data = await res.json();
       setCustomers((prev) => prev.map((c) => (c._id === data._id ? data : c)));
-      refreshData();
       return data;
     } catch (error) {
       console.error('Erro ao atualizar cliente:', error);
       return undefined;
     }
   };
+
   const deleteCustomer = async (id: string): Promise<boolean> => {
     try {
       const res = await fetch(`${API_BASE_URL}/customers/${id}`, {
@@ -162,7 +167,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res.ok) {
         setCustomers((prev) => prev.filter((c) => c._id !== id));
-        refreshData();
         return true;
       }
       throw new Error('Falha ao deletar cliente');
@@ -171,9 +175,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
   };
-  const getCustomerById = (id: string) => { return customers.find((c) => c._id === id); };
-  const getCustomersWithDebt = () => { return customers.filter((c) => c.hasDebt); };
 
+  const getCustomerById = (id: string) => {
+    return customers.find((c) => c._id === id);
+  };
+
+  const getCustomersWithDebt = () => {
+    return customers.filter((c) => c.hasDebt);
+  };
+
+  // --- Métodos de Pedidos (com chamadas à API) ---
   const calculateOrderTotal = (items: OrderItem[]) => {
     return items.reduce((total, item) => {
       const product = products.find(p => p._id === item.productId);
@@ -191,7 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok) throw new Error('Falha ao adicionar pedido');
       const newOrder = await res.json();
       setOrders((prev) => [...prev, newOrder]);
-      refreshData(); // Chamada importante
+      refreshData(); // Chamada importante para atualizar clientes e pedidos no estado global
       return newOrder;
     } catch (error) {
       console.error('Erro ao adicionar pedido:', error);
@@ -209,7 +220,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok) throw new Error('Falha ao atualizar pedido');
       const data = await res.json();
       setOrders((prev) => prev.map((o) => (o._id === data._id ? data : o)));
-      refreshData(); // Chamada importante
+      refreshData(); // Chamada importante para atualizar clientes e pedidos no estado global
       return data;
     } catch (error) {
       console.error('Erro ao atualizar pedido:', error);
@@ -224,7 +235,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => o._id !== id));
-        refreshData(); // Chamada importante
+        refreshData(); // Chamada importante para atualizar clientes e pedidos no estado global
         return true;
       }
       throw new Error('Falha ao deletar pedido');
@@ -243,7 +254,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok) throw new Error('Falha ao marcar pedido como pago');
       const data = await res.json();
       setOrders((prev) => prev.map((o) => (o._id === data._id ? data : o)));
-      refreshData(); // Chamada importante
+      refreshData(); // Chamada importante para atualizar clientes e pedidos no estado global
       return data;
     } catch (error) {
       console.error('Erro ao marcar pedido como pago:', error);
@@ -252,9 +263,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const value = {
-    products, customers, orders, activeTab, setActiveTab, addProduct, updateProduct, deleteProduct,
-    addCustomer, updateCustomer, deleteCustomer, addOrder, updateOrder, deleteOrder, markOrderAsPaid,
-    getProductById, getCustomerById, calculateOrderTotal, getCustomersWithDebt, refreshData,
+    products,
+    customers,
+    orders,
+    activeTab,
+    setActiveTab,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    addCustomer,
+    updateCustomer,
+    deleteCustomer,
+    addOrder,
+    updateOrder,
+    deleteOrder,
+    markOrderAsPaid,
+    getProductById,
+    getCustomerById,
+    calculateOrderTotal,
+    getCustomersWithDebt,
+    refreshData,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
