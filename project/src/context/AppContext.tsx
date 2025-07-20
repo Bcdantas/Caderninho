@@ -5,7 +5,7 @@ interface AppContextType {
   products: Product[];
   customers: Customer[];
   orders: Order[];
-  debts: Debt[]; // <-- NOVO ESTADO AQUI
+  debts: Debt[]; // NOVO ESTADO AQUI
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
   // Métodos CRUD para Produtos
@@ -13,7 +13,7 @@ interface AppContextType {
   updateProduct: (product: Product) => Promise<Product | undefined>;
   deleteProduct: (id: string) => Promise<boolean>;
   // Métodos CRUD para Clientes
-  addCustomer: (customer: Omit<Customer, '_id' | 'hasDebt'>) => Promise<Customer | undefined>;
+  addCustomer: (customer: Omit<Customer, '_id' | 'hasDebt'>) => Promise<Customer | undefined>; // hasDebt é omitido aqui pois não é mais do modelo
   updateCustomer: (customer: Customer) => Promise<Customer | undefined>;
   deleteCustomer: (id: string) => Promise<boolean>;
   // Métodos CRUD para Pedidos
@@ -25,57 +25,53 @@ interface AppContextType {
   getProductById: (id: string) => Product | undefined;
   getCustomerById: (id: string) => Customer | undefined;
   calculateOrderTotal: (items: OrderItem[]) => number;
-  getCustomersWithDebt: () => Customer[]; // Manter a assinatura, mas a implementação usa 'debts'
-  refreshData: () => Promise<void>; // Método para recarregar todos os dados
+  getCustomersWithDebt: () => (Customer & { totalDebt: number; hasDebt: boolean })[]; // Assinatura atualizada
+  refreshData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// URL base do nosso backend
 const API_BASE_URL = 'http://localhost:4000/api';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [debts, setDebts] = useState<Debt[]>([]); // <-- NOVO ESTADO INICIALIZADO
+  const [debts, setDebts] = useState<Debt[]>([]); // NOVO ESTADO INICIALIZADO
   const [activeTab, setActiveTab] = useState<AppTab>('orders');
 
-  // Função para carregar TODOS os dados do backend, incluindo dívidas
   const refreshData = useCallback(async () => {
     try {
-      const [productsRes, customersRes, ordersRes, debtsRes] = await Promise.all([ // <-- Adicionado debtsRes
+      const [productsRes, customersRes, ordersRes, debtsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/products`),
         fetch(`${API_BASE_URL}/customers`),
         fetch(`${API_BASE_URL}/orders`),
-        fetch(`${API_BASE_URL}/debts`), // <-- BUSCA A NOVA ROTA DE DÍVIDAS AQUI
+        fetch(`${API_BASE_URL}/debts`), // BUSCA A NOVA ROTA DE DÍVIDAS AQUI
       ]);
 
-      if (!productsRes.ok || !customersRes.ok || !ordersRes.ok || !debtsRes.ok) { // <-- Verifica debtsRes
+      if (!productsRes.ok || !customersRes.ok || !ordersRes.ok || !debtsRes.ok) {
         throw new Error('Falha ao buscar dados da API');
       }
 
       const fetchedProducts = await productsRes.json();
       const fetchedCustomers = await customersRes.json();
       const fetchedOrders = await ordersRes.json();
-      const fetchedDebts = await debtsRes.json(); // <-- Pega os dados de dívidas
+      const fetchedDebts = await debtsRes.json();
 
       setProducts(fetchedProducts);
       setCustomers(fetchedCustomers);
       setOrders(fetchedOrders);
-      setDebts(fetchedDebts); // <-- DEFINE O ESTADO DE DÍVIDAS
+      setDebts(fetchedDebts); // DEFINE O ESTADO DE DÍVIDAS
     } catch (error) {
       console.error('Erro ao buscar dados da API:', error);
-      // Aqui você pode adicionar uma notificação ao usuário sobre o erro
     }
-  }, []); // Dependência vazia, pois refreshData não depende de props/state diretamente
+  }, []);
 
-  // Carrega os dados na primeira vez que o componente é montado
   useEffect(() => {
     refreshData();
   }, [refreshData]);
 
-  // --- Métodos de Produtos (com chamadas à API) ---
+  // --- Métodos de Produtos ---
   const addProduct = async (product: Omit<Product, '_id'>): Promise<Product | undefined> => {
     try {
       const res = await fetch(`${API_BASE_URL}/products`, {
@@ -130,8 +126,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return products.find((p) => p._id === id);
   };
 
-  // --- Métodos de Clientes (com chamadas à API) ---
-  // A lógica de hasDebt foi movida para a coleção Debt
+  // --- Métodos de Clientes ---
   const addCustomer = async (customer: Omit<Customer, '_id' | 'hasDebt'>): Promise<Customer | undefined> => {
     try {
       const res = await fetch(`${API_BASE_URL}/customers`, {
@@ -187,20 +182,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // getCustomersWithDebt agora usa a nova coleção 'debts' para determinar quem tem dívida
-const getCustomersWithDebt = useCallback(() => {
-  return debts
-    .filter(debt => debt.totalDebt > 0)
-    .map(debt => {
-      const customer = customers.find(c => c._id === debt.customerId);
-      // Retorna o objeto de cliente com um hasDebt *virtual* e o totalDebt REAL da coleção 'debts'
-      return customer ? { ...customer, hasDebt: true, totalDebt: debt.totalDebt } : undefined;
-    })
-    .filter(Boolean) as (Customer & { totalDebt: number })[]; // Cast para garantir o tipo
+  const getCustomersWithDebt = useCallback(() => {
+    // Filtra as entradas de dívida que têm totalDebt > 0
+    // Mapeia essas dívidas para os objetos de cliente correspondentes
+    return debts
+      .filter(debt => debt.totalDebt > 0)
+      .map(debt => {
+        const customer = customers.find(c => c._id === debt.customerId);
+        // Retorna o objeto de cliente com um hasDebt *virtual* e o totalDebt REAL da coleção 'debts'
+        return customer ? { ...customer, hasDebt: true, totalDebt: debt.totalDebt } : undefined;
+      })
+      .filter(Boolean) as (Customer & { totalDebt: number; hasDebt: boolean })[]; // Cast para garantir o tipo
 
-}, [debts, customers]);
+  }, [debts, customers]);
 
 
-  // --- Métodos de Pedidos (com chamadas à API) ---
+  // --- Métodos de Pedidos ---
   const calculateOrderTotal = (items: OrderItem[]) => {
     return items.reduce((total, item) => {
       // Busca o produto no estado 'products' do AppContext
@@ -252,7 +249,6 @@ const getCustomersWithDebt = useCallback(() => {
       });
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => o._id !== id));
-        refreshData(); // Chamada importante para atualizar TODOS os estados
         return true;
       }
       throw new Error('Falha ao deletar pedido');
@@ -284,7 +280,7 @@ const getCustomersWithDebt = useCallback(() => {
     products,
     customers,
     orders,
-    debts, // <-- NOVO VALOR AQUI
+    debts, // NOVO VALOR AQUI
     activeTab,
     setActiveTab,
     addProduct,
