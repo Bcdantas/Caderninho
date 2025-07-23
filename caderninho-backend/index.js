@@ -1,7 +1,7 @@
 require('dotenv').config(); // Carrega as variáveis de ambiente do arquivo .env
 const express = require('express'); // Importa o Express
 const mongoose = require('mongoose'); // Importa o Mongoose para o MongoDB
-const cors = require('require('cors')); // Importa o CORS para comunicação entre front e back
+const cors = require('cors'); // Importa o CORS para comunicação entre front e back
 
 const app = express(); // Inicializa o Express
 const PORT = process.env.PORT || 4000; // Define a porta do servidor, ou 4000 por padrão
