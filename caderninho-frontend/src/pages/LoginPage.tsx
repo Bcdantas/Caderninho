@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoginForm from '../components/LoginForm'; // Importa o formulário de login
 
-// Este será um passo futuro: Contexto de Autenticação
+// Futuramente, usaremos o contexto para lidar com o login
 // import { useAppContext } from '../context/AppContext';
 
 const LoginPage: React.FC = () => {
@@ -10,8 +10,7 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Futuramente, usaremos o contexto para lidar com o login
-  // const { login } = useAppContext();
+  // Futuramente: const { login } = useAppContext();
 
   const handleLogin = async (username: string, password: string) => {
     setLoading(true);
@@ -35,7 +34,8 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    // Classes Bootstrap para centralizar na página
+    <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
       <LoginForm onSubmit={handleLogin} loading={loading} error={error} />
     </div>
   );

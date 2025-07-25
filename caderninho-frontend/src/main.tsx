@@ -1,40 +1,39 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-// import App from './App.tsx'; // Não usaremos App diretamente na rota raiz por enquanto
-import './index.css';
+import App from './App.tsx'; // O componente App agora será nosso layout principal
+import LoginPage from './pages/LoginPage.tsx';
+import { AuthProvider } from './context/AppContext.tsx'; // Importa o AuthProvider
 
-// Importar as páginas que vamos criar
-import LoginPage from './pages/LoginPage.tsx'; // Login
-// import ProductsPage from './pages/ProductsPage.tsx'; // Produtos
-// import CustomersPage from './pages/CustomersPage.tsx'; // Clientes
-// import OrdersPage from './pages/OrdersPage.tsx';     // Pedidos
-// import DebtsPage from './pages/DebtsPage.tsx';       // Dívidas
-// import DashboardPage from './pages/DashboardPage.tsx'; // Dashboard (página inicial após login)
+import 'bootstrap/dist/css/bootstrap.min.css'; // Importa o CSS do Bootstrap
+import './index.css'; // Mantenha esta linha para o CSS customizado futuro, se precisar.
+
+// Importar as páginas que vamos criar futuramente
+// import DashboardPage from './pages/DashboardPage.tsx'; // Página inicial após login
+// import ProductsPage from './pages/ProductsPage.tsx';
+// import CustomersPage from './pages/CustomersPage.tsx';
+// import OrdersPage from './pages/OrdersPage.tsx';
+// import DebtsPage from './pages/DebtsPage.tsx';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Router>
-      <Routes>
-        {/* A rota raiz agora leva para a página de login */}
-        <Route path="/" element={<LoginPage />} />
-        {/* Também pode ter uma rota explícita para /login */}
-        <Route path="/login" element={<LoginPage />} />
+      <AuthProvider> {/* Envolve toda a aplicação com o AuthProvider */}
+        <Routes>
+          <Route path="/login" element={<LoginPage />} /> {/* Rota de login */}
+          <Route path="/" element={<LoginPage />} /> {/* Redireciona raiz para login */}
 
-
-        {/* Rotas futuras: */}
-        {/* A rota do dashboard será aninhada dentro do App, que servirá como layout */}
-        {/* <Route path="/" element={<App />}>
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="customers" element={<CustomersPage />} />
-          <Route path="orders" element={<OrdersPage />} />
-          <Route path="debts" element={<DebtsPage />} />
-        </Route> */}
-
-        {/* Exemplo de rota protegida (admin) */}
-        {/* <Route path="/admin" element={<AdminPage />} /> */}
-      </Routes>
+          {/* A rota base "/" com elemento <App /> será o layout para rotas protegidas */}
+          <Route path="/" element={<App />}>
+            {/* Futuramente: Rotas Protegidas aqui dentro do App (layout) */}
+            {/* Exemplo: <Route path="dashboard" element={<DashboardPage />} /> */}
+            {/* Exemplo: <Route path="products" element={<ProductsPage />} /> */}
+            {/* Exemplo: <Route path="customers" element={<CustomersPage />} /> */}
+            {/* Exemplo: <Route path="orders" element={<OrdersPage />} /> */}
+            {/* Exemplo: <Route path="debts" element={<DebtsPage />} /> */}
+          </Route>
+        </Routes>
+      </AuthProvider>
     </Router>
   </React.StrictMode>,
 );
