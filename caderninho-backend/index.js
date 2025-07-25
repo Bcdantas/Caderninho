@@ -9,6 +9,9 @@ const MONGO_URI = process.env.MONGO_URI; // Pega a string de conexão do MongoDB
 
 const userRoutes = require('./routes/userRoutes'); // Importa as rotas de usuário
 
+const productRoutes = require('./routes/productRoutes');
+const customerRoutes = require('./routes/customerRoutes');
+
 // Middlewares (regras para todas as requisições)
 app.use(cors()); // Permite requisições de outras origens
 app.use(express.json()); // Permite que o servidor entenda dados em formato JSON
@@ -25,6 +28,8 @@ app.get('/', (req, res) => {
 
 // Rotas da API
 app.use('/api/users', userRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/customers', customerRoutes);
 
 // Iniciar o servidor
 app.listen(PORT, () => {
