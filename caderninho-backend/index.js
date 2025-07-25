@@ -11,6 +11,8 @@ const userRoutes = require('./routes/userRoutes'); // Importa as rotas de usuár
 
 const productRoutes = require('./routes/productRoutes');
 const customerRoutes = require('./routes/customerRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const debtRoutes = require('./routes/debtRoutes');
 
 // Middlewares (regras para todas as requisições)
 app.use(cors()); // Permite requisições de outras origens
@@ -29,7 +31,9 @@ app.get('/', (req, res) => {
 // Rotas da API
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/customers', customerRoutes);
+app.use('/api/customers', customerRoutes); 
+app.use('/api/orders', orderRoutes);
+app.use('/api/debts', debtRoutes);
 
 // Iniciar o servidor
 app.listen(PORT, () => {
