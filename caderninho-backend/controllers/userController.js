@@ -57,29 +57,3 @@ exports.authUser = async (req, res) => { // Alterado para exports.authUser
 // @desc    Obter todos os usuários (clientes)
 // @route   GET /api/users/customers
 // @access  Private (Admin)
-exports.getAllUsers = async (req, res) => {
-    try {
-        const users = await User.find({ role: 'customer' })
-                                .select('-password')
-                                .populate({
-                                    path: 'orders', // Popula o virtual 'orders'
-                                    select: 'totalAmount isPaid' // Seleciona apenas o totalAmount e isPaid dos pedidos
-                                });
-
-        // Mapeia os usuários para adicionar o totalDebt calculado
-        const usersWithDebt = users.map(user => ({
-            _id: user._id,
-            username: user.username,
-            phone: user.phone, // Assumindo que phone está no User schema
-            role: user.role,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
-            totalDebt: user.calculateTotalDebt() // Calcula a dívida usando o método
-        }));
-
-        res.json(usersWithDebt);
-    } catch (err) {
-        console.error('Erro ao buscar usuários/clientes:', err);
-        res.status(500).json({ message: 'Erro ao buscar usuários/clientes', error: err.message });
-    }
-};

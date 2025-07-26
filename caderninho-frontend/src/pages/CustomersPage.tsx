@@ -31,7 +31,7 @@ const CustomersPage: React.FC = () => {
     setError(null);
     try {
       // Usar a rota de users/customers que agora retorna totalDebt
-      const response = await fetch('http://localhost:4000/api/users/customers', {
+      const response = await fetch('http://localhost:4000/api/customers', {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userToken}`,

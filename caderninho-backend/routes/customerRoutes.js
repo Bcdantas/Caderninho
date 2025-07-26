@@ -8,15 +8,37 @@ const Customer = require('../models/Customer'); // Importa o modelo de Cliente
 // @desc    Obter todos os clientes
 // @route   GET /api/customers
 // @access  Public (por enquanto)
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req, res) => { // <<-- ADICIONADO 'protect'
     try {
-        const customers = await Customer.find({}); // Encontra todos os clientes no DB
-        res.json(customers); // Retorna os clientes como JSON
+        const customers = await Customer.find({})
+                                        .populate({ // Popula pedidos para calcular dívida
+                                            path: 'orders', // Se Customer tiver virtual 'orders'
+                                            select: 'totalAmount isPaid customer' // totalAmount e isPaid são essenciais
+                                        });
+
+        const customersWithDebt = customers.map(customer => {
+            // Filtra pedidos não pagos para este cliente
+            const unpaidOrders = customer.orders.filter(order => !order.isPaid);
+            // Soma o totalAmount dos pedidos não pagos
+            const totalDebt = unpaidOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+
+            return {
+                _id: customer._id,
+                name: customer.name,
+                phone: customer.phone,
+                createdAt: customer.createdAt,
+                updatedAt: customer.updatedAt,
+                totalDebt: totalDebt // Adiciona o campo de dívida total
+            };
+        });
+
+        res.json(customersWithDebt);
     } catch (error) {
+        console.error('Erro ao buscar clientes com dívida total:', error);
         res.status(500).json({ message: 'Erro ao buscar clientes', error: error.message });
     }
 });
-
+        
 // @desc    Obter um cliente por ID
 // @route   GET /api/customers/:id
 // @access  Public (por enquanto)

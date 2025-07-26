@@ -16,18 +16,26 @@ const customerSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Campo virtual para calcular o total da dívida.
-// Isso NÃO é armazenado no banco, mas calculado quando solicitado.
-customerSchema.virtual('totalDebt', {
-    ref: 'Debt', // Referencia o modelo Debt
-    localField: '_id', // O campo que conecta é o _id do cliente
-    foreignField: 'customer', // No modelo Debt, o campo 'customer' guarda o _id do cliente
-    justOne: false, // Pode ter várias dívidas para o mesmo cliente
-    options: { match: { isPaid: false } } // Filtra apenas as dívidas não pagas
+customerSchema.virtual('orders', { // <<-- NOVO VIRTUAL!
+    ref: 'Order',
+    localField: '_id',
+    foreignField: 'customer',
+    justOne: false,
 });
 
-// Certifique-se de que os campos virtuais sejam incluídos nas respostas JSON
-customerSchema.set('toObject', { virtuals: true });
+// Função que calcula o total da dívida a partir dos pedidos não pagos
+customerSchema.methods.calculateTotalDebt = function() { // <<-- NOVO MÉTODO!
+    if (!this.orders) {
+        return 0; // Se orders não foi populado, ou se não há pedidos
+    }
+    const unpaidOrders = this.orders.filter(order => !order.isPaid);
+    const total = unpaidOrders.reduce((sum, order) => sum + order.totalAmount, 0); // Use totalAmount aqui
+    return total;
+};
+
+// Garante que os virtuais e métodos sejam incluídos ao converter para JSON
 customerSchema.set('toJSON', { virtuals: true });
+customerSchema.set('toObject', { virtuals: true });
+
 
 module.exports = mongoose.model('Customer', customerSchema);

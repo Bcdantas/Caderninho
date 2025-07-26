@@ -9,7 +9,5 @@ const { protect } = require('../middleware/authMiddleware');
 router.post('/register', registerUser); // Chama a função registerUser do controller
 router.post('/login', authUser);       // Chama a função authUser do controller
 
-// Rotas protegidas
-router.get('/customers', protect, getAllUsers); // Rota para listar clientes (usuários com role 'customer')
 
 module.exports = router;
