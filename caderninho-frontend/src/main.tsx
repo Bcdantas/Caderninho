@@ -1,31 +1,36 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import App from './App.tsx'; // Componente App será o layout principal
+import App from './App.tsx'; // O componente App agora é o layout principal
 import LoginPage from './pages/LoginPage.tsx';
-import { AuthProvider } from './context/AppContext.tsx'; // Importa o AuthProvider
+import DashboardPage from './pages/DashboardPage.tsx'; // Importa a nova DashboardPage
+import ProtectedRoute from './components/ProtectedRoute.tsx'; // Importa o ProtectedRoute
+import { AuthProvider } from './context/AppContext.tsx';
 
-import 'bootstrap/dist/css/bootstrap.min.css'; // Importa o CSS do Bootstrap
-import './index.css'; // Mantenha para CSS customizado futuro
-
-// Não vamos importar DashboardPage aqui ainda. Faremos isso no próximo passo.
-// import DashboardPage from './pages/DashboardPage.tsx'; 
-
-// Não vamos importar ProtectedRoute aqui ainda. Faremos isso no próximo passo.
-// import ProtectedRoute from './components/ProtectedRoute.tsx'; 
+import 'bootstrap/dist/css/bootstrap.min.css';
+import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Router>
-      <AuthProvider> {/* Envolve toda a aplicação com o AuthProvider */}
+      <AuthProvider> {/* O AuthProvider deve envolver TODAS as Routes */}
         <Routes>
-          {/* Rotas de Login */}
+          {/* Rota de Login (Não Protegida) */}
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<LoginPage />} /> {/* A raiz redireciona para o login */}
+          {/* Redireciona a raiz para a página de login por padrão */}
+          <Route path="/" element={<LoginPage />} /> 
 
-          {/* A rota base "/" com elemento <App /> será o layout para rotas protegidas
-              Mas não vamos aninhar nada aqui ainda. Faremos isso depois de testar o login. */}
-          <Route path="/app-layout-test" element={<App />} />
+          {/* Rotas Protegidas - Usam o ProtectedRoute como guardião */}
+          <Route path="/" element={<ProtectedRoute />}>
+            {/* O App é o layout para as rotas aninhadas aqui dentro */}
+            <Route path="/" element={<App />}> 
+              <Route path="dashboard" element={<DashboardPage />} /> {/* Rota explícita para o dashboard */}
+              {/* <Route index element={<DashboardPage />} /> // OPCIONAL: Se quiser que '/' dentro do App seja o dashboard */}
+
+              {/* Futuras rotas protegidas (ex: /products, /customers, etc.) virão aqui */}
+              {/* Ex: <Route path="products" element={<ProductsPage />} /> */}
+            </Route>
+          </Route>
         </Routes>
       </AuthProvider>
     </Router>
