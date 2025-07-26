@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext'; // Para pegar o token de autenticação
 import ProductForm from '../components/ProductForm'; // Formulário para adicionar/editar produtos
-import { Product } from '../types/ProductTypes'; // IMPORTAÇÃO CORRETA AGORA!
 
 const ProductsPage: React.FC = () => {
   const { userToken } = useAppContext();

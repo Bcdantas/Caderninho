@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext'; // Para pegar o token
-import { Product } from '../types/ProductTypes'; // IMPORTAÇÃO CORRETA AGORA!
 
 interface ProductFormProps {
   product?: Product | null; // Produto opcional para edição
