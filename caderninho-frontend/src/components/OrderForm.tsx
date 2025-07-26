@@ -24,11 +24,12 @@ interface FormOrderItem {
 // **************************************************************
 
 interface OrderFormProps {
+  order?: Order | null; 
   onSave: () => void;
   onCancel: () => void;
 }
 
-const OrderForm: React.FC<OrderFormProps> = ({ onSave, onCancel }) => {
+const OrderForm: React.FC<OrderFormProps> = ({ order, onSave, onCancel }) => {
   const { userToken } = useAppContext();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -41,6 +42,29 @@ const OrderForm: React.FC<OrderFormProps> = ({ onSave, onCancel }) => {
   useEffect(() => {
     fetchCustomersAndProducts();
   }, [userToken]);
+
+  const [originalOrderItems, setOriginalOrderItems] = useState<FormOrderItem[]>([]); // Para rastrear itens originais
+
+useEffect(() => {
+    if (order) {
+        setSelectedCustomer(order.customer._id); // Preenche o cliente
+        // Mapeia os itens do pedido existente para o formato FormOrderItem
+        const mappedItems: FormOrderItem[] = order.items.map(item => ({
+            productId: item.product._id,
+            quantity: item.quantity,
+            name: item.product.name,
+            price: item.product.price
+        }));
+        setSelectedProducts(mappedItems);
+        setOriginalOrderItems(mappedItems); // Guarda para lógica de diff (se necessário)
+    } else {
+        // Se não é edição, limpa o formulário
+        setSelectedCustomer('');
+        setSelectedProducts([]);
+        setOriginalOrderItems([]);
+    }
+    setError(null);
+}, [order]);
 
   const fetchCustomersAndProducts = async () => {
     if (!userToken) return;
@@ -130,8 +154,9 @@ const OrderForm: React.FC<OrderFormProps> = ({ onSave, onCancel }) => {
     };
 
     try {
-      const response = await fetch('http://localhost:4000/api/orders', {
-        method: 'POST',
+      const url = order ? `http://localhost:4000/api/orders/${order._id}` : 'http://localhost:4000/api/orders';
+      const response = await fetch(url, {
+        method: order ? 'PUT' : 'POST', // Usa PUT se for edição, POST se for novo pedido
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userToken}`,
@@ -167,7 +192,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ onSave, onCancel }) => {
 
   return (
     <div className="card p-4 mb-4">
-      <h4 className="mb-3">Criar Novo Pedido</h4>
+      <h4 className="mb-3">{order ? 'Editar Pedido' : 'Criar Novo Pedido'}</h4>
       {error && <div className="alert alert-danger mb-3">{error}</div>}
 
       <form onSubmit={handleSubmit}>

@@ -44,6 +44,7 @@ const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null); // <<-- ADICIONE ESTA LINHA
 
   useEffect(() => {
     fetchOrders();
@@ -78,6 +79,11 @@ const OrdersPage: React.FC = () => {
   const handleAddOrder = () => {
     setShowForm(true);
   };
+
+  const handleEditOrder = (order: Order) => { // <<-- ADICIONE ESTA FUNÇÃO
+    setEditingOrder(order);
+    setShowForm(true);
+};
 
   const handleMarkAsPaid = async (orderId: string) => {
     if (!window.confirm('Tem certeza que deseja marcar este pedido como pago? Isso também pagará a dívida associada.')) {
@@ -162,6 +168,7 @@ const OrdersPage: React.FC = () => {
 
       {showForm ? (
         <OrderForm
+          order={editingOrder}
           onSave={handleFormSubmit}
           onCancel={() => setShowForm(false)}
         />
@@ -210,13 +217,22 @@ const OrdersPage: React.FC = () => {
                       <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                       <td>
                         {!order.isPaid && (
-                          <button
-                            className="btn btn-success btn-sm me-2"
-                            onClick={() => handleMarkAsPaid(order._id)}
-                            title="Marcar como Pago"
-                          >
-                            Pagar
-                          </button>
+                          <>
+                            <button
+                              className="btn btn-success btn-sm me-2"
+                              onClick={() => handleMarkAsPaid(order._id)}
+                              title="Marcar como Pago"
+                            >
+                              Pagar
+                            </button>
+                            <button
+                              className="btn btn-warning btn-sm"
+                              onClick={() => handleEditOrder(order)}
+                              title="Editar Pedido"
+                            >
+                              Editar
+                            </button>
+                          </>
                         )}
                         <button
                           className="btn btn-danger btn-sm"
