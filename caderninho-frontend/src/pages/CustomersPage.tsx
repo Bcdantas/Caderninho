@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useAppContext } from '../context/AppContext'; // Para pegar o token de autenticação
-import CustomerForm from '../components/CustomerForm'; // Formulário para adicionar/editar clientes
+import { useAppContext } from '../context/AppContext';
+import CustomerForm from '../components/CustomerForm';
 
-// *** DEFINIÇÃO DA INTERFACE CUSTOMER AQUI ***
+// *** DEFINIÇÃO DA INTERFACE CUSTOMER ATUALIZADA AQUI ***
 interface Customer {
   _id: string;
   name: string;
   phone?: string; // Opcional
   createdAt: string;
   updatedAt: string;
-  // Futuramente, Customer também terá totalDebt, mas vamos adicionar isso depois de Pedidos e Dívidas
-  // totalDebt?: number;
+  totalDebt?: number; // <<-- ADICIONADO: Campo para a dívida total
 }
-// *******************************************
+// ******************************************************
 
 const CustomersPage: React.FC = () => {
-  const { userToken } = useAppContext();
+  const { userToken, showToast } = useAppContext(); // Adicionado showToast para notificações
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +30,8 @@ const CustomersPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:4000/api/customers', {
+      // Usar a rota de users/customers que agora retorna totalDebt
+      const response = await fetch('http://localhost:4000/api/users/customers', {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userToken}`,
@@ -47,6 +47,7 @@ const CustomersPage: React.FC = () => {
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar clientes.');
       console.error('Erro ao carregar clientes:', err);
+      showToast(err.message || 'Erro ao carregar clientes.', 'danger'); // Notificação de erro
     } finally {
       setLoading(false);
     }
@@ -63,11 +64,12 @@ const CustomersPage: React.FC = () => {
   };
 
   const handleDeleteCustomer = async (id: string) => {
-    if (!window.confirm('Tem certeza que deseja deletar este cliente?')) {
+    if (!window.confirm('Tem certeza que deseja deletar este cliente? Isso também removerá suas dívidas e pedidos associados.')) { // Adicionado aviso
       return;
     }
     if (!userToken) {
       setError('Você precisa estar logado para deletar clientes.');
+      showToast('Você precisa estar logado para deletar clientes.', 'danger');
       return;
     }
 
@@ -86,10 +88,11 @@ const CustomersPage: React.FC = () => {
         throw new Error(errorData.message || 'Falha ao deletar cliente.');
       }
       setCustomers(customers.filter(c => c._id !== id));
-      alert('Cliente deletado com sucesso!');
+      showToast('Cliente deletado com sucesso!', 'success'); // Notificação de sucesso
     } catch (err: any) {
       setError(err.message || 'Erro ao deletar cliente.');
       console.error('Erro ao deletar cliente:', err);
+      showToast(err.message || 'Erro ao deletar cliente.', 'danger');
     } finally {
       setLoading(false);
     }
@@ -129,6 +132,7 @@ const CustomersPage: React.FC = () => {
                   <tr>
                     <th>Nome</th>
                     <th>Telefone</th>
+                    <th>Dívida Total</th> {/* <<-- ADICIONADO: Nova Coluna */}
                     <th>Ações</th>
                   </tr>
                 </thead>
@@ -137,6 +141,13 @@ const CustomersPage: React.FC = () => {
                     <tr key={customer._id}>
                       <td>{customer.name}</td>
                       <td>{customer.phone || 'N/A'}</td>
+                      <td>
+                        {customer.totalDebt !== undefined ? (
+                          <span className={customer.totalDebt > 0 ? 'text-danger fw-bold' : 'text-success'}>
+                            R$ {customer.totalDebt.toFixed(2).replace('.', ',')}
+                          </span>
+                        ) : 'R$ 0,00'} {/* Exibe a dívida formatada */}
+                      </td>
                       <td>
                         <button
                           className="btn btn-warning btn-sm me-2"
