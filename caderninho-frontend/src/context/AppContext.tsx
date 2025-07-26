@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ToastMessage } from '../components/ToastNotification'; // <<-- ADICIONE ESTA LINHA
 
 // 1. Definir a interface para o que o contexto vai prover
 interface AuthContextType {
@@ -9,6 +10,9 @@ interface AuthContextType {
   username: string | null;
   login: (token: string, role: string, username: string) => void;
   logout: () => void;
+  showToast: (message: string, type?: 'success' | 'danger' | 'info' | 'warning') => void; 
+  toasts: ToastMessage[]; // <<-- ADICIONE ESTA LINHA
+  removeToast: (id: string) => void; // <<-- ADICIONE ESTA LINHA
 }
 
 // 2. Criar o Contexto
@@ -24,6 +28,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [username, setUsernameState] = useState<string | null>(null); 
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const navigate = useNavigate();
 
@@ -63,11 +68,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     navigate('/login');
   };
 
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, userToken, userRole, username, login, logout }}>
-      {children}
+    const showToast = (message: string, type: 'success' | 'danger' | 'info' | 'warning' = 'info') => { // <<-- ADICIONE ESTA FUNÇÃO
+    const id = Math.random().toString(36).substring(2, 9); // Gera um ID único para o toast
+    setToasts(prevToasts => [...prevToasts, { id, message, type }]);
+  };
+const removeToast = (id: string) => { // <<-- ADICIONE ESTA FUNÇÃO
+    setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
+  };
+
+return (
+    <AuthContext.Provider value={{ isAuthenticated, userToken, userRole, username, login, logout, showToast, toasts, removeToast }}>
+        {children}
     </AuthContext.Provider>
-  );
+);
 };
 
 // 4. Hook customizado para usar o contexto

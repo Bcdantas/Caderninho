@@ -1,9 +1,10 @@
 import React from 'react';
-import { Outlet, Link } from 'react-router-dom'; // Link para navegação
-import { useAppContext } from './context/AppContext'; // Importa o contexto para logout
+import { Outlet, Link } from 'react-router-dom';
+import { useAppContext } from './context/AppContext';
+import ToastNotification, { ToastMessage } from './components/ToastNotification'; 
 
 function App() {
-  const { isAuthenticated, logout, username, userRole } = useAppContext(); // Pega funções e dados do contexto
+  const { isAuthenticated, logout, username, userRole, toasts, removeToast } = useAppContext();
 
   return (
     <div className="d-flex flex-column min-vh-100 bg-light"> {/* Layout principal com Bootstrap */}
@@ -61,9 +62,15 @@ function App() {
       </main>
 
       {/* Footer (Opcional) */}
-      <footer className="footer mt-auto py-3 bg-dark text-white text-center">
-        <div className="container">
-          <span>&copy; 2025 Caderninho. Todos os direitos reservados.</span>
+      <footer>
+        {/* Container para as notificações Toast */}
+        <div
+          className="toast-container position-fixed bottom-0 end-0 p-3"
+          style={{ zIndex: 11 }} // Garante que fique acima de outros elementos
+        >
+          {toasts.map((toast) => (
+            <ToastNotification key={toast.id} toast={toast} onClose={removeToast} />
+          ))}
         </div>
       </footer>
     </div>
