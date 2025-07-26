@@ -25,10 +25,10 @@ function App() {
                   { <li className="nav-item">
                     <Link className="nav-link" to="/products">Produtos</Link>
                   </li>
-                  /*
                   <li className="nav-item">
                     <Link className="nav-link" to="/customers">Clientes</Link>
                   </li>
+                  /*
                   <li className="nav-item">
                     <Link className="nav-link" to="/orders">Pedidos</Link>
                   </li>

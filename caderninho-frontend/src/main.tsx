@@ -7,7 +7,8 @@ import DashboardPage from './pages/DashboardPage.tsx'; // Importa a nova Dashboa
 import './index.css'; // Importa o CSS global
 import 'bootstrap/dist/css/bootstrap.min.css'; // Importa o CSS do Bootstrap 
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // Importa o JS do Bootstrap para funcionalidades interativas
-import ProductsPage from './pages/ProductsPage.tsx'; // Importa a página de produtos (futura)
+import ProductsPage from './pages/ProductsPage.tsx'; // Importa a página de produtos 
+import CustomersPage from './pages/CustomersPage.tsx'; // Importa a página de clientes 
 import ProtectedRoute from './components/ProtectedRoute.tsx'; // Importa o ProtectedRoute
 import { AuthProvider } from './context/AppContext.tsx';
 
@@ -27,7 +28,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             {/* O App é o layout para as rotas aninhadas aqui dentro */}
             <Route path="/" element={<App />}> 
               <Route path="dashboard" element={<DashboardPage />} /> {/* Rota explícita para o dashboard */}
-              <Route path="products" element={<ProductsPage />} /> {/* Rota para a página de produtos (futura) */}
+              <Route path="products" element={<ProductsPage />} /> {/* Rota para a página de produtos */}
+              <Route path="customers" element={<CustomersPage />} /> {/* Rota para a página de clientes */}
               {/* Outras rotas protegidas podem ser adicionadas aqui no futuro */}
               {/* <Route index element={<DashboardPage />} /> // OPCIONAL: Se quiser que '/' dentro do App seja o dashboard */}
 
