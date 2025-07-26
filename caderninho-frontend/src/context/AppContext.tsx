@@ -23,7 +23,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [username, setUsernameState] = useState<string | null>(null); // Renomeado para evitar conflito
+  const [username, setUsernameState] = useState<string | null>(null); 
 
   const navigate = useNavigate();
 
@@ -31,13 +31,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('userToken');
     const role = localStorage.getItem('userRole');
-    const storedUsername = localStorage.getItem('username'); // Pega o username do localStorage
+    const storedUsername = localStorage.getItem('username');
 
     if (token && role && storedUsername) {
       setIsAuthenticated(true);
       setUserToken(token);
       setUserRole(role);
-      setUsernameState(storedUsername); // Define o username do estado
+      setUsernameState(storedUsername);
     }
   }, []);
 
@@ -45,22 +45,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(true);
     setUserToken(token);
     setUserRole(role);
-    setUsernameState(user); // Guarda o username no estado
+    setUsernameState(user);
     localStorage.setItem('userToken', token);
     localStorage.setItem('userRole', role);
-    localStorage.setItem('username', user); // Guarda o username no localStorage
-    navigate('/dashboard'); // Redireciona para o dashboard
+    localStorage.setItem('username', user);
+    navigate('/dashboard'); // Redireciona para o dashboard (criaremos esta rota em breve)
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     setUserToken(null);
     setUserRole(null);
-    setUsernameState(null); // Limpa o username do estado
+    setUsernameState(null);
     localStorage.removeItem('userToken');
     localStorage.removeItem('userRole');
-    localStorage.removeItem('username'); // Remove o username do localStorage
-    navigate('/login'); // Redireciona para a página de login
+    localStorage.removeItem('username');
+    navigate('/login');
   };
 
   return (

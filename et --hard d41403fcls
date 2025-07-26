@@ -1,0 +1,24 @@
+[33ma1ad007[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Use type-only import for Product interface
+[33m5a8343e[m Move ProductForm to components directory
+[33mdc34911[m Add products page and product form components
+[33m352c6b5[m Add protected routes and dashboard page
+[33md41403f[m Migrate UI from Tailwind to Bootstrap and add AppContext
+[33m2a7e2a3[m Refine LoginForm styles and clean up Tailwind config
+[33m2f0ee26[m Add login page and form components
+[33mf4b2bd1[m Add React Router and set up basic routing structure
+[33m06502ee[m Add @tailwindcss/postcss and update PostCSS config
+[33m1eca3aa[m Initialize React + TypeScript + Vite project
+[33m3e53117[m Add order and debt routes to backend API
+[33m270d409[m Add customer and product route handlers
+[33m25ccee6[m Add user authentication routes to backend
+[33m650fce5[m Add Mongoose models for Customer, Debt, Order, Product, and User
+[33m689044a[m Fix CORS import and update MongoDB connection string
+[33m9fdf4f6[m !° Atualização Backend
+[33m5cd2678[m começar do zero
+[33m30ce338[m Refactor debt handling to use Debt collection
+[33m6a1ed97[m Refactor DebtList to use debts collection directly
+[33m38347d8[m Implement debt tracking with new Debt model and API
+[33m35906ae[m Refactor and enhance Mongoose schemas for models
+[33m9ce0750[m Refactor AppContext for clarity and API method grouping
+[33ma24d052[m Initialize project with Vite React/TS and backend API
+[33ma2ca2c8[m Initial commit
