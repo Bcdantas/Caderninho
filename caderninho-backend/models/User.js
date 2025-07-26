@@ -35,5 +35,23 @@ userSchema.pre('save', async function (next) {
 userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
+userSchema.virtual('orders', {
+    ref: 'Order',
+    localField: '_id',
+    foreignField: 'customer',
+    justOne: false,
+});
+// Garante que os virtuais sejam incluídos ao converter para JSON
+userSchema.methods.calculateTotalDebt = function() {
+    if (!this.orders) {
+        return 0; // Se orders não foi populado, ou se não há pedidos
+    }
+    const unpaidOrders = this.orders.filter(order => !order.isPaid);
+    const total = unpaidOrders.reduce((sum, order) => sum + order.totalAmount, 0); // Use totalAmount aqui
+    return total;
+};
+
+userSchema.set('toJSON', { virtuals: true });
+userSchema.set('toObject', { virtuals: true });
 
 module.exports = mongoose.model('User', userSchema);

@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-// Define ToastMessage type locally if import fails
-export type ToastMessage = {
+
+interface ToastMessage { 
   id: string;
   message: string;
   type: 'success' | 'danger' | 'info' | 'warning';
-};
+}
+
 // 1. Definir a interface para o que o contexto vai prover
 interface AuthContextType {
   isAuthenticated: boolean;

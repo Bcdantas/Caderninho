@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Toast } from 'bootstrap'; // Importa a classe Toast do Bootstrap JS
 
 // Definimos a interface para o Toast
-export interface ToastMessage { // ESTA LINHA É CRUCIAL!
+ interface ToastMessage { // ESTA LINHA É CRUCIAL!
   id: string;
   message: string;
   type: 'success' | 'danger' | 'info' | 'warning';

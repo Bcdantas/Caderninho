@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAppContext } from './context/AppContext';
-import ToastNotification, { ToastMessage } from './components/ToastNotification'; 
+import ToastNotification from './components/ToastNotification';
 
 function App() {
   const { isAuthenticated, logout, username, userRole, toasts, removeToast } = useAppContext();
