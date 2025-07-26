@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const Customer = require('../models/Customer'); // Importa o modelo de Cliente
-
-// Middleware de proteção de rota (autenticação) - AINDA NÃO TEMOS
-// const { protect } = require('../middleware/authMiddleware');
+const Customer = require('../models/Customer');
+const { protect } = require('../middleware/authMiddleware');
+const Order = require('../models/Order');
 
 // @desc    Obter todos os clientes
 // @route   GET /api/customers
@@ -38,7 +37,7 @@ router.get('/', protect, async (req, res) => { // <<-- ADICIONADO 'protect'
         res.status(500).json({ message: 'Erro ao buscar clientes', error: error.message });
     }
 });
-        
+
 // @desc    Obter um cliente por ID
 // @route   GET /api/customers/:id
 // @access  Public (por enquanto)
