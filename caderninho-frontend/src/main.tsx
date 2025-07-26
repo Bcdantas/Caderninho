@@ -10,6 +10,7 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // Importa o JS do Bootstrap
 import ProductsPage from './pages/ProductsPage.tsx'; // Importa a página de produtos 
 import CustomersPage from './pages/CustomersPage.tsx'; // Importa a página de clientes 
 import OrdersPage from './pages/OrdersPage.tsx'; // Importa a página de pedidos
+import DebtsPage from './pages/DebtsPage.tsx'; // Importa a página de dívidas
 import ProtectedRoute from './components/ProtectedRoute.tsx'; // Importa o ProtectedRoute
 import { AuthProvider } from './context/AppContext.tsx';
 
@@ -32,9 +33,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="products" element={<ProductsPage />} /> {/* Rota para a página de produtos */}
               <Route path="customers" element={<CustomersPage />} /> {/* Rota para a página de clientes */}
               <Route path="orders" element={<OrdersPage />} /> {/* Rota para a página de pedidos */}
+              <Route path="debts" element={<DebtsPage />} /> {/* Rota para a página de dívidas */}
      
-              {/* Futuras rotas protegidas (ex: /products, /customers, etc.) virão aqui */}
-              {/* Ex: <Route path="products" element={<ProductsPage />} /> */}
             </Route>
           </Route>
         </Routes>
