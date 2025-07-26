@@ -14,6 +14,9 @@ const customerRoutes = require('./routes/customerRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const debtRoutes = require('./routes/debtRoutes');
 
+const reportRoutes = require('./routes/reportRoutes');
+const { protect } = require('./middleware/authMiddleware'); // Importa o middleware
+
 // Middlewares (regras para todas as requisições)
 app.use(cors()); // Permite requisições de outras origens
 app.use(express.json()); // Permite que o servidor entenda dados em formato JSON
@@ -31,9 +34,11 @@ app.get('/', (req, res) => {
 // Rotas da API
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/customers', customerRoutes); 
+app.use('/api/customers', customerRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/debts', debtRoutes);
+// Novas rotas de relatórios, todas protegidas
+app.use('/api/reports', protect, reportRoutes); // Todas as rotas de relatório usarão 'protect'
 
 // Iniciar o servidor
 app.listen(PORT, () => {
