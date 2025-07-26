@@ -39,16 +39,16 @@ const DashboardPage: React.FC = () => {
     setLoadingReports(true);
     setErrorReports(null);
     try {
-      const [profitRes, highDebtsRes, topSellingRes] = await Promise.all([
-        fetch('http://localhost:4000/api/reports/daily-profit', {
-          headers: { Authorization: `Bearer ${userToken}` }
-        }),
-        fetch('http://4000/api/reports/high-debts', { // Corrigindo para 4000
-          headers: { Authorization: `Bearer ${userToken}` }
-        }),
-        fetch('http://localhost:4000/api/reports/top-selling-items', {
-          headers: { Authorization: `Bearer ${userToken}` }
-        })
+   const [profitRes, highDebtsRes, topSellingRes] = await Promise.all([
+    fetch('http://localhost:4000/api/reports/daily-profit', { // <-- DEVE SER localhost:4000
+        headers: { Authorization: `Bearer ${userToken}` }
+    }),
+    fetch('http://localhost:4000/api/reports/high-debts', { // <-- DEVE SER localhost:4000
+        headers: { Authorization: `Bearer ${userToken}` }
+    }),
+    fetch('http://localhost:4000/api/reports/top-selling-items', { // <-- DEVE SER localhost:4000
+        headers: { Authorization: `Bearer ${userToken}` }
+    })
       ]);
 
       if (!profitRes.ok) throw new Error('Falha ao buscar lucro do dia anterior.');

@@ -41,6 +41,6 @@ app.use('/api/debts', debtRoutes);
 app.use('/api/reports', protect, reportRoutes); // Todas as rotas de relatório usarão 'protect'
 
 // Iniciar o servidor
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+app.listen(PORT, '127.0.0.1', () => { // Adiciona '127.0.0.1' para forçar IPv4
+    console.log(`Servidor rodando na porta ${PORT} no endereço 127.0.0.1`);
 });
