@@ -15,14 +15,14 @@ interface Customer {
 }
 
 interface OrderItem {
-  product: Product; // O produto populado
+  product: Product;
   quantity: number;
   priceAtOrder: number;
 }
 
 interface Order {
   _id: string;
-  customer: Customer; // O cliente populado
+  customer: Customer;
   items: OrderItem[];
   totalAmount: number;
   isPaid: boolean;
@@ -32,21 +32,29 @@ interface Order {
 
 interface Debt {
   _id: string;
-  customer: Customer; // O cliente populado
-  order: Order; // O pedido populado
+  customer: Customer;
+  order: Order;
   amount: number;
   isPaid: boolean;
   debtDate: string;
   createdAt: string;
   updatedAt: string;
 }
+
+// NOVA INTERFACE: Para agrupar dívidas por cliente
+interface GroupedDebt {
+    customer: Customer;
+    totalDebt: number;
+    individualDebts: Debt[]; // Lista dos pedidos (dívidas) individuais desse cliente
+}
 // ***************************************************************
 
 const DebtsPage: React.FC = () => {
-  const { userToken } = useAppContext();
-  const [debts, setDebts] = useState<Debt[]>([]);
+  const { userToken, showToast } = useAppContext();
+  const [groupedDebts, setGroupedDebts] = useState<GroupedDebt[]>([]); // Estado para dívidas agrupadas
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null); // Para controlar qual cliente está expandido
 
   useEffect(() => {
     fetchDebts();
@@ -57,7 +65,6 @@ const DebtsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // Por padrão, buscaremos apenas dívidas não pagas
       const response = await fetch('http://localhost:4000/api/debts?isPaid=false', {
         headers: {
           'Content-Type': 'application/json',
@@ -70,10 +77,31 @@ const DebtsPage: React.FC = () => {
         throw new Error(errorData.message || 'Falha ao buscar dívidas.');
       }
       const data: Debt[] = await response.json();
-      setDebts(data);
+
+      // --- Lógica para Agrupar Dívidas por Cliente ---
+      const debtsMap = new Map<string, GroupedDebt>(); // Usa um Map para agrupar
+
+      data.forEach(debt => {
+        const customerId = debt.customer._id;
+        if (!debtsMap.has(customerId)) {
+          debtsMap.set(customerId, {
+            customer: debt.customer,
+            totalDebt: 0,
+            individualDebts: []
+          });
+        }
+        const grouped = debtsMap.get(customerId)!;
+        grouped.totalDebt += debt.amount;
+        grouped.individualDebts.push(debt);
+      });
+
+      // Converte o Map de volta para um array para o estado
+      setGroupedDebts(Array.from(debtsMap.values()));
+
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar dívidas.');
       console.error('Erro ao carregar dívidas:', err);
+      showToast(err.message || 'Erro ao carregar dívidas.', 'danger');
     } finally {
       setLoading(false);
     }
@@ -85,13 +113,13 @@ const DebtsPage: React.FC = () => {
     }
     if (!userToken) {
       setError('Você precisa estar logado para realizar esta operação.');
+      showToast('Você precisa estar logado para realizar esta operação.', 'danger');
       return;
     }
 
-    setLoading(true);
+    setLoading(true); // Pode ser um loading local ou global, por enquanto global
     setError(null);
     try {
-      // Chama a rota de marcar dívida como paga
       const response = await fetch(`http://localhost:4000/api/debts/${debtId}/pay`, {
         method: 'PUT',
         headers: {
@@ -103,15 +131,22 @@ const DebtsPage: React.FC = () => {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Falha ao marcar dívida como paga.');
       }
-      // Remove a dívida da lista (já que estamos mostrando apenas as não pagas)
-      setDebts(debts.filter(d => d._id !== debtId));
-      alert('Dívida marcada como paga com sucesso!');
+
+      // Após marcar como pago, refaz a busca para atualizar a lista
+      showToast('Dívida marcada como paga com sucesso!', 'success');
+      fetchDebts(); // Recarrega todas as dívidas para atualizar o agrupamento
+
     } catch (err: any) {
       setError(err.message || 'Erro ao marcar dívida como paga.');
       console.error('Erro ao marcar dívida como paga:', err);
+      showToast(err.message || 'Erro ao marcar dívida como paga.', 'danger');
     } finally {
-      setLoading(false);
+      setLoading(false); // Ajuste se for um loading local
     }
+  };
+
+  const toggleExpand = (customerId: string) => {
+    setExpandedCustomerId(prevId => (prevId === customerId ? null : customerId));
   };
 
   if (loading) return <div className="text-center mt-5">Carregando dívidas...</div>;
@@ -121,7 +156,7 @@ const DebtsPage: React.FC = () => {
     <div className="container mt-4">
       <h2 className="mb-4">Contas Pendentes (Dívidas)</h2>
 
-      {debts.length === 0 ? (
+      {groupedDebts.length === 0 ? (
         <div className="alert alert-info">Não há dívidas pendentes no momento.</div>
       ) : (
         <div className="table-responsive">
@@ -129,41 +164,69 @@ const DebtsPage: React.FC = () => {
             <thead>
               <tr>
                 <th>Cliente</th>
-                <th>Valor</th>
-                <th>Pedido</th>
-                <th>Data da Dívida</th>
+                <th>Total Dívida</th>
+                <th>Detalhes</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {debts.map(debt => (
-                <tr key={debt._id}>
-                  <td>{debt.customer ? debt.customer.name : 'Desconhecido'}</td>
-                  <td>R$ {debt.amount ? debt.amount.toFixed(2).replace('.', ',') : '0,00'}</td>
-                  <td>
-                    {debt.order ? (
-                      <ul className="list-unstyled mb-0">
-                        {debt.order.items.map(item => (
-                          <li key={item.product._id || item.product}>
-                            {item.product ? item.product.name : 'Produto Desconhecido'} (x{item.quantity})
-                          </li>
-                        ))}
-                      </ul>
-                    ) : 'Pedido Desconhecido'}
-                  </td>
-                  <td>{new Date(debt.debtDate).toLocaleDateString()}</td>
-                  <td>
-                    {!debt.isPaid && (
+              {groupedDebts.map(groupedDebt => (
+                <React.Fragment key={groupedDebt.customer._id}>
+                  <tr onClick={() => toggleExpand(groupedDebt.customer._id)} style={{ cursor: 'pointer' }}>
+                    <td>{groupedDebt.customer ? groupedDebt.customer.name : 'Desconhecido'}</td>
+                    <td>
+                      <span className="text-danger fw-bold">
+                        R$ {groupedDebt.totalDebt.toFixed(2).replace('.', ',')}
+                      </span>
+                    </td>
+                    <td>
                       <button
-                        className="btn btn-success btn-sm"
-                        onClick={() => handleMarkAsPaid(debt._id)}
-                        title="Marcar como Pago"
+                        className="btn btn-outline-info btn-sm"
+                        onClick={(e) => { e.stopPropagation(); toggleExpand(groupedDebt.customer._id); }}
                       >
-                        Pagar Dívida
+                        {expandedCustomerId === groupedDebt.customer._id ? 'Ocultar' : 'Ver Detalhes'}
                       </button>
-                    )}
-                  </td>
-                </tr>
+                    </td>
+                    <td>
+                      {/* Botão de Pagar Dívida Total - Futuramente */}
+                      {/* Poderíamos ter um botão para marcar TODAS as dívidas do cliente como pagas */}
+                    </td>
+                  </tr>
+                  {expandedCustomerId === groupedDebt.customer._id && (
+                    <tr>
+                      <td colSpan={4}> {/* Ocupa todas as colunas da tabela */}
+                        <div className="bg-light p-3 border rounded mb-3">
+                          <h6>Pedidos em Dívida de {groupedDebt.customer.name}:</h6>
+                          <ul className="list-group">
+                            {groupedDebt.individualDebts.map(debt => (
+                              <li key={debt._id} className="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                  Pedido: <span className="fw-bold">R$ {debt.amount.toFixed(2).replace('.', ',')}</span>
+                                  <br />
+                                  <small className="text-muted">Data: {new Date(debt.debtDate).toLocaleDateString()}</small>
+                                  <ul className="list-unstyled ms-3 mt-1 small">
+                                    {debt.order && debt.order.items.map(item => (
+                                      <li key={item.product._id || item.product}>
+                                        {item.product ? item.product.name : 'Produto Desconhecido'} (x{item.quantity})
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                                <button
+                                  className="btn btn-success btn-sm"
+                                  onClick={(e) => { e.stopPropagation(); handleMarkAsPaid(debt._id); }}
+                                  title="Marcar este pedido como Pago"
+                                >
+                                  Pagar Este
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
