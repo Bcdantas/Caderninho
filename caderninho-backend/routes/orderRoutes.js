@@ -5,6 +5,8 @@ const Product = require('../models/Product'); // Para buscar detalhes do produto
 const Customer = require('../models/Customer'); // Para garantir que o cliente existe
 const Debt = require('../models/Debt'); // Para criar dívidas
 
+const { protect } = require('../middleware/authMiddleware'); // <<-- ESTA LINHA É A QUE FALTAVA OU ESTAVA COMENTADA!
+
 // @desc    Criar um novo pedido
 // @route   POST /api/orders
 // @access  Private (futuramente)
