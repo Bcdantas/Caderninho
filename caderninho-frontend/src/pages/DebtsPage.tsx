@@ -82,14 +82,20 @@ const DebtsPage: React.FC = () => {
       const debtsMap = new Map<string, GroupedDebt>(); // Usa um Map para agrupar
 
       data.forEach(debt => {
+        const customerId = debt.customer?._id;
+         if (!debt.customer || !debt.customer._id) {
+        console.warn('Dívida ignorada devido a cliente nulo ou sem _id:', debt);
+        return; // Pula esta dívida se o cliente não for válido
+
         const customerId = debt.customer._id;
-        if (!debtsMap.has(customerId)) {
-          debtsMap.set(customerId, {
-            customer: debt.customer,
-            totalDebt: 0,
-            individualDebts: []
-          });
-        }
+  }
+          if (!debtsMap.has(customerId)) {
+        debtsMap.set(customerId, {
+        customer: debt.customer, // Usa o objeto customer que sabemos ser válido
+        totalDebt: 0,
+        individualDebts: []
+        });
+  }
         const grouped = debtsMap.get(customerId)!;
         grouped.totalDebt += debt.amount;
         grouped.individualDebts.push(debt);
@@ -171,9 +177,9 @@ const DebtsPage: React.FC = () => {
             </thead>
             <tbody>
               {groupedDebts.map(groupedDebt => (
-                <React.Fragment key={groupedDebt.customer._id}>
-                  <tr onClick={() => toggleExpand(groupedDebt.customer._id)} style={{ cursor: 'pointer' }}>
-                    <td>{groupedDebt.customer ? groupedDebt.customer.name : 'Desconhecido'}</td>
+                <React.Fragment key={groupedDebt.customer?._id || groupedDebt.customer?.name || groupedDebt.customer?.phone || Math.random().toString()}> {/* Mais robusta */}
+                  <tr onClick={() => toggleExpand(groupedDebt.customer?._id || '')} style={{ cursor: 'pointer' }}>
+                    <td>{groupedDebt.customer?.name || 'Cliente Desconhecido'}</td>
                     <td>
                       <span className="text-danger fw-bold">
                         R$ {groupedDebt.totalDebt.toFixed(2).replace('.', ',')}
@@ -196,7 +202,7 @@ const DebtsPage: React.FC = () => {
                     <tr>
                       <td colSpan={4}> {/* Ocupa todas as colunas da tabela */}
                         <div className="bg-light p-3 border rounded mb-3">
-                          <h6>Pedidos em Dívida de {groupedDebt.customer.name}:</h6>
+                          <h6>Pedidos em Dívida de {groupedDebt.customer?.name || 'Cliente Desconhecido'}:</h6>
                           <ul className="list-group">
                             {groupedDebt.individualDebts.map(debt => (
                               <li key={debt._id} className="list-group-item d-flex justify-content-between align-items-center">
@@ -206,7 +212,7 @@ const DebtsPage: React.FC = () => {
                                   <small className="text-muted">Data: {new Date(debt.debtDate).toLocaleDateString()}</small>
                                   <ul className="list-unstyled ms-3 mt-1 small">
                                     {debt.order && debt.order.items.map(item => (
-                                      <li key={item.product._id || item.product}>
+                                      <li key={item.product && typeof item.product._id === 'string' ? item.product._id : item.product && typeof item.product.name === 'string' ? item.product.name : `unknown-${item.quantity}`}>
                                         {item.product ? item.product.name : 'Produto Desconhecido'} (x{item.quantity})
                                       </li>
                                     ))}

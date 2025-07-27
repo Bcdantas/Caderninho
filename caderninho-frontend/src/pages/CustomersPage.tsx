@@ -128,14 +128,14 @@ const CustomersPage: React.FC = () => {
           ) : (
             <div className="table-responsive">
               <table className="table table-striped table-hover">
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>Telefone</th>
-                    <th>Dívida Total</th> {/* <<-- ADICIONADO: Nova Coluna */}
-                    <th>Ações</th>
-                  </tr>
-                </thead>
+               <thead>
+            <tr>
+              <th>Nome</th> {/* Isso é OK */}
+              <th>Telefone</th> {/* Isso é OK */}
+              <th>Dívida Total</th> {/* Isso é OK */}
+              <th>Ações</th> {/* Isso é OK */}
+            </tr> {/* Isso é OK */}
+          </thead>
                 <tbody>
                   {customers.map(customer => (
                     <tr key={customer._id}>
