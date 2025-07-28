@@ -114,7 +114,36 @@ router.get('/:id', async (req, res) => {
 // @desc    Atualizar status de pagamento de um pedido e sua dívida associada
 // @route   PUT /api/orders/:id/pay
 // @access  Private (futuramente)
-router.put('/:id', protect, async (req, res) => { // <<-- ADICIONE ESTA ROTA
+router.put('/:id/pay', protect, async (req, res) => { // <<-- ESTE BLOCO DEVE ESTAR PRESENTE E NÃO COMENTADO!
+    try {
+        const order = await Order.findById(req.params.id);
+
+        if (order) {
+            order.isPaid = true;
+            await order.save();
+
+            // Adicionado para lidar com dívida associada
+            await Debt.findOneAndUpdate(
+                { order: order._id },
+                { isPaid: true },
+                { new: true }
+            );
+
+            res.json({ message: 'Pedido e dívida marcados como pagos com sucesso!', order });
+        } else {
+            res.status(404).json({ message: 'Pedido não encontrado.' });
+        }
+    } catch (error) {
+        console.error('Erro ao marcar pedido como pago:', error);
+        res.status(500).json({ message: 'Erro ao marcar pedido como pago', error: error.message });
+    }
+});
+
+// Rota para atualizar um pedido (editar itens, cliente, etc.)
+// @desc    Atualizar um pedido existente
+// @route   PUT /api/orders/:id
+// @access  Private (futuramente)
+router.put('/:id', protect, async (req, res) => {
     const { customerId, items } = req.body; // Recebe o cliente e novos itens
 
     try {
