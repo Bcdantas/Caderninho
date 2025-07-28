@@ -54,7 +54,7 @@ router.get('/high-debts', protect, async (req, res) => {
     try {
         const highDebts = await Debt.find({
             isPaid: false, // Apenas dívidas pendentes
-            amount: { $gt: 100 } // Maiores que R$ 100
+            // REMOVIDO: amount: { $gt: 100 }
         })
         .populate('customer', 'name'); // Popula apenas o nome do cliente
 

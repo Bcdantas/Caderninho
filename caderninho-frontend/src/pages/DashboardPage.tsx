@@ -25,15 +25,14 @@ interface TopSellingItem {
 // NOVA INTERFACE: Para agrupar débitos altos por cliente no Dashboard
 interface GroupedHighDebt {
     customer: Customer;
-    totalAmountOver100: number; // A soma das dívidas desse cliente > R$100
-    // Não precisamos dos individualDebts aqui, só o total
+    totalAmountOver100: number; // A soma das dívidas desse cliente
 }
 // ************************************************************
 
 const DashboardPage: React.FC = () => {
   const { username, userRole, userToken, showToast } = useAppContext();
   const [profitYesterday, setProfitYesterday] = useState<number | null>(null);
-  const [groupedHighDebts, setGroupedHighDebts] = useState<GroupedHighDebt[]>([]); // <<-- MUDANÇA AQUI
+  const [groupedHighDebts, setGroupedHighDebts] = useState<GroupedHighDebt[]>([]);
   const [topSellingItems, setTopSellingItems] = useState<TopSellingItem[]>([]);
   const [loadingReports, setLoadingReports] = useState<boolean>(true);
   const [errorReports, setErrorReports] = useState<string | null>(null);
@@ -52,7 +51,7 @@ const DashboardPage: React.FC = () => {
         fetch('http://localhost:4000/api/reports/daily-profit', {
           headers: { Authorization: `Bearer ${userToken}` }
         }),
-        fetch('http://localhost:4000/api/reports/high-debts', {
+        fetch('http://localhost:4000/api/reports/high-debts', { // Agora busca TODAS as dívidas pendentes
           headers: { Authorization: `Bearer ${userToken}` }
         }),
         fetch('http://localhost:4000/api/reports/top-selling-items', {
@@ -65,14 +64,14 @@ const DashboardPage: React.FC = () => {
       if (!topSellingRes.ok) throw new Error('Falha ao buscar itens mais vendidos.');
 
       const profitData = await profitRes.json();
-      const highDebtsData: Debt[] = await highDebtsRes.json(); // Pega os débitos individuais
+      const highDebtsData: Debt[] = await highDebtsRes.json(); // Pega TODAS as dívidas individuais
 
       const topSellingData = await topSellingRes.json();
 
       setProfitYesterday(profitData.profitYesterday);
       setTopSellingItems(topSellingData);
 
-      // --- Lógica para Agrupar Débitos Altos por Cliente ---
+      // --- Lógica para Agrupar Dívidas e DEPOIS Filtrar por Total > R$ 100 ---
       const highDebtsMap = new Map<string, GroupedHighDebt>();
 
       highDebtsData.forEach(debt => {
@@ -88,9 +87,14 @@ const DashboardPage: React.FC = () => {
           });
         }
         const grouped = highDebtsMap.get(customerId)!;
-        grouped.totalAmountOver100 += debt.amount; // Soma as dívidas > 100 para o cliente
+        grouped.totalAmountOver100 += debt.amount; // Soma TODAS as dívidas do cliente
       });
-      setGroupedHighDebts(Array.from(highDebtsMap.values())); // <<-- MUDANÇA AQUI
+
+      // FILTRA APENAS OS CLIENTES CUJA DÍVIDA TOTAL É MAIOR QUE R$ 100
+      const filteredGroupedHighDebts = Array.from(highDebtsMap.values()).filter(
+        groupedDebt => groupedDebt.totalAmountOver100 > 100
+      );
+      setGroupedHighDebts(filteredGroupedHighDebts);
 
     } catch (err: any) {
       setErrorReports(err.message || 'Erro ao carregar relatórios.');
@@ -105,9 +109,8 @@ const DashboardPage: React.FC = () => {
     <div className="container mt-4">
       <div className="alert alert-success" role="alert">
         <h4 className="alert-heading">Bem-vindo, {username}!</h4>
-        {/* <p className="mb-0">Este é o painel de controle do seu Caderninho.</p> <<-- REMOVIDO */}
         <hr />
-        <p className="mb-0">Você está logado como **{userRole}**.</p> {/* Adicionei de volta uma linha útil */}
+        <p className="mb-0">Você está logado como **{userRole}**.</p>
       </div>
 
       <h3 className="mt-5 mb-4">Relatórios Rápidos</h3>
@@ -138,15 +141,15 @@ const DashboardPage: React.FC = () => {
             <div className="card h-100">
               <div className="card-body">
                 <h5 className="card-title">Débitos Pendentes &gt; R$ 100</h5>
-                {groupedHighDebts.length === 0 ? ( // <<-- MUDANÇA AQUI
+                {groupedHighDebts.length === 0 ? (
                   <p className="card-text text-muted">Nenhum débito pendente acima de R$100.</p>
                 ) : (
                   <ul className="list-group list-group-flush">
-                    {groupedHighDebts.map(groupedHighDebt => ( // <<-- MUDANÇA AQUI
+                    {groupedHighDebts.map(groupedHighDebt => (
                       <li key={groupedHighDebt.customer._id} className="list-group-item d-flex justify-content-between align-items-center">
-                        {groupedHighDebt.customer ? groupedHighDebt.customer.name : 'Cliente Desconhecido'} {/* <<-- MUDANÇA AQUI */}
+                        {groupedHighDebt.customer ? groupedHighDebt.customer.name : 'Cliente Desconhecido'}
                         <span className="badge bg-danger rounded-pill">
-                          R$ {groupedHighDebt.totalAmountOver100.toFixed(2).replace('.', ',')} {/* <<-- MUDANÇA AQUI */}
+                          R$ {groupedHighDebt.totalAmountOver100.toFixed(2).replace('.', ',')}
                         </span>
                       </li>
                     ))}
