@@ -143,68 +143,45 @@ router.put('/:id/pay', protect, async (req, res) => { // <<-- ESTE BLOCO DEVE ES
 // @desc    Atualizar um pedido existente
 // @route   PUT /api/orders/:id
 // @access  Private (futuramente)
-router.put('/:id', protect, async (req, res) => {
-    const { customerId, items } = req.body; // Recebe o cliente e novos itens
+router.put('/:id/pay', protect, async (req, res) => {
+    const { paidAmount, paymentMethod } = req.body;
 
     try {
         const order = await Order.findById(req.params.id);
 
-        if (!order) {
-            return res.status(404).json({ message: 'Pedido não encontrado.' });
-        }
-
-        // Você pode adicionar verificações aqui, por exemplo, se o pedido já está pago
-        if (order.isPaid) {
-            return res.status(400).json({ message: 'Não é possível editar um pedido já pago.' });
-        }
-
-        // 1. Verificar se o cliente existe (se alterado ou apenas para validação)
-        if (customerId && customerId !== order.customer.toString()) { // Verifica se o cliente foi alterado
-            const newCustomer = await Customer.findById(customerId);
-            if (!newCustomer) {
-                return res.status(404).json({ message: 'Novo cliente não encontrado.' });
-            }
-            order.customer = customerId; // Atualiza o cliente do pedido
-        }
-
-        let totalAmount = 0;
-        const newOrderItems = [];
-
-        // 2. Processar e validar os novos itens
-        for (const item of items) {
-            const product = await Product.findById(item.productId);
-            if (!product) {
-                return res.status(404).json({ message: `Produto com ID ${item.productId} não encontrado.` });
-            }
-            if (item.quantity <= 0) {
-                return res.status(400).json({ message: `Quantidade inválida para o produto ${product.name}.` });
+        if (order) {
+            if (order.isPaid) {
+                return res.status(400).json({ message: 'Este pedido já foi pago.' });
             }
 
-            newOrderItems.push({
-                product: product._id,
-                quantity: item.quantity,
-                priceAtOrder: product.price // Salva o preço atual do produto no momento da atualização
+            order.isPaid = true;
+            order.paidAmount = paidAmount || order.totalAmount; // Se paidAmount não for enviado, assume totalAmount
+            order.paymentMethod = paymentMethod || 'Dinheiro'; // Padrão 'Dinheiro' se não especificado
+            order.paymentDate = new Date(); // Registra a data/hora do pagamento
+
+            const updatedOrder = await order.save();
+
+            // Atualizar a dívida total do cliente
+            const customer = await Customer.findById(order.customer);
+            if (customer) {
+                // A dívida do cliente é reduzida pelo totalAmount do pedido,
+                // independentemente do paidAmount (o troco não afeta a dívida).
+                customer.totalDebt -= order.totalAmount;
+                await customer.save();
+            }
+
+            res.json({
+                message: 'Pedido marcado como pago com sucesso!',
+                order: updatedOrder,
+                customerDebt: customer ? customer.totalDebt : null, // Retorna a dívida atualizada do cliente
             });
-            totalAmount += product.price * item.quantity;
+        } else {
+            res.status(404).json({ message: 'Pedido não encontrado.' });
         }
-
-        order.items = newOrderItems;
-        order.totalAmount = totalAmount; // Recalcula o total
-
-        const updatedOrder = await order.save();
-
-        // Opcional: Atualizar a dívida associada, se houver e o valor total tiver mudado
-        await Debt.findOneAndUpdate(
-            { order: updatedOrder._id, isPaid: false }, // Encontra a dívida não paga para este pedido
-            { amount: totalAmount }, // Atualiza o valor da dívida
-            { new: true }
-        );
-
-        res.json(updatedOrder);
-
     } catch (error) {
-        console.error('Erro ao atualizar pedido:', error);
-        res.status(500).json({ message: 'Erro ao atualizar pedido', error: error.message });
+        console.error('Erro ao processar pagamento do pedido:', error.message);
+        console.error(error.stack); // Para depuração detalhada
+        res.status(500).json({ message: 'Erro ao processar pagamento do pedido', error: error.message });
     }
 });
 router.delete('/:id', async (req, res) => {

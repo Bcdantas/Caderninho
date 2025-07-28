@@ -5,7 +5,7 @@ const Debt = require('../models/Debt');   // Para buscar dívidas
 const Product = require('../models/Product'); // Para buscar detalhes do produto
 
 // Middleware de proteção de rota (autenticação) - Vamos usar aqui
-const { protect } = require('../middleware/authMiddleware'); // <<-- AINDA NÃO TEMOS ISSO, ADICIONAREMOS NO PRÓXIMO PASSO!
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
 // @desc    Obter o lucro (total de vendas pagas) do dia anterior
 // @route   GET /api/reports/daily-profit
@@ -63,6 +63,34 @@ router.get('/high-debts', protect, async (req, res) => {
     } catch (error) {
         console.error('Erro ao buscar débitos altos:', error);
         res.status(500).json({ message: 'Erro ao buscar débitos altos', error: error.message });
+    }
+});
+
+router.get('/total-profit', protect, authorizeRoles('admin'), async (req, res) =>  {
+    try {
+        const totalProfitResult = await Order.aggregate([
+            {
+                $match: {
+                    isPaid: true, // Apenas pedidos que foram pagos
+                },
+            },
+            {
+                $group: {
+                    _id: null, // Agrupa todos os documentos em um único grupo
+                    totalProfit: { $sum: '$paidAmount' }, // Soma o campo paidAmount
+                },
+            },
+        ]);
+
+        // Se não houver pedidos pagos, o resultado será um array vazio.
+        const totalProfit = totalProfitResult.length > 0 ? totalProfitResult[0].totalProfit : 0;
+
+        res.json({ totalProfit });
+
+    } catch (error) {
+        console.error('Erro ao buscar lucro total:', error.message);
+        console.error(error.stack); // Para depuração detalhada
+        res.status(500).json({ message: 'Erro ao buscar lucro total', error: error.message });
     }
 });
 

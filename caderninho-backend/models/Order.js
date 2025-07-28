@@ -32,10 +32,25 @@ const orderSchema = new mongoose.Schema({
         min: 0,
         default: 0
     },
-    isPaid: {
-        type: Boolean,
-        default: false // O pedido começa como não pago (uma dívida)
-    }
+    isPaid: { // Campo para indicar se o pedido foi pago
+            type: Boolean,
+            required: true,
+            default: false,
+        },
+        paidAmount: { // Novo campo: Valor efetivamente pago pelo cliente
+            type: Number,
+            required: false, // Não é obrigatório no momento da criação do pedido
+            default: 0.0,
+        },
+        paymentMethod: { // Novo campo: Método de pagamento (Dinheiro, Cartão, Outro)
+            type: String,
+            required: false,
+            enum: ['Dinheiro', 'Cartão', 'Outro'], // Opções de método de pagamento
+        },
+        paymentDate: { // Novo campo: Data e hora do pagamento
+            type: Date,
+            required: false,
+        },
 }, {
     timestamps: true
 });
