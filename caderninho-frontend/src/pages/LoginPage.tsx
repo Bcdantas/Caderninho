@@ -15,13 +15,13 @@ const LoginPage: React.FC = () => {
 
     try {
       // 1. Fazer a requisição POST para o backend
-      const response = await fetch('http://localhost:4000/api/users/login', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }), // Envia o usuário e senha como JSON
-      });
+        body: JSON.stringify({ username, password }),
+        });
 
       // 2. Verificar a resposta
       if (!response.ok) { // Se a resposta não for 2xx (ex: 401, 400, 500)

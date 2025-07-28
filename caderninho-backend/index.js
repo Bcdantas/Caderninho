@@ -41,7 +41,8 @@ app.use('/api/debts', debtRoutes);
 app.use('/api/reports', protect, reportRoutes); // Todas as rotas de relatório usarão 'protect'
 
 // Iniciar o servidor
-const HOST = '127.0.0.1'; // Ou o seu endereço IPv4 real (ex: '192.168.1.100') se preferir ser específico
+const HOST = '0.0.0.0'; 
 app.listen(PORT, HOST, () => {
     console.log(`Servidor rodando na porta ${PORT} no endereço ${HOST}`);
+    // REMOVIDO: A linha problemática de console.log com os.networkInterfaces() para evitar erro
 });

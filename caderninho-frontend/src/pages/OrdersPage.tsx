@@ -55,7 +55,7 @@ const OrdersPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:4000/api/orders', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/orders`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userToken}`,
@@ -97,7 +97,7 @@ const OrdersPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:4000/api/orders/${orderId}/pay`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/orders/${orderId}/pay`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${userToken}`,
@@ -133,7 +133,7 @@ const OrdersPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:4000/api/orders/${orderId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/orders/${orderId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${userToken}`,

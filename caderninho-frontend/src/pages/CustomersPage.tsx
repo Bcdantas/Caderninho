@@ -31,7 +31,7 @@ const CustomersPage: React.FC = () => {
     setError(null);
     try {
       // Usar a rota de users/customers que agora retorna totalDebt
-      const response = await fetch('http://localhost:4000/api/customers', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/customers`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userToken}`,
@@ -76,7 +76,7 @@ const CustomersPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:4000/api/customers/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/customers/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${userToken}`,

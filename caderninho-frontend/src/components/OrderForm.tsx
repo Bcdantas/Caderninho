@@ -72,10 +72,10 @@ useEffect(() => {
     setError(null);
     try {
       const [customersResponse, productsResponse] = await Promise.all([
-        fetch('http://localhost:4000/api/customers', {
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/customers`, {
           headers: { Authorization: `Bearer ${userToken}` }
         }),
-        fetch('http://localhost:4000/api/products', {
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products`, {
           headers: { Authorization: `Bearer ${userToken}` }
         })
       ]);
@@ -154,7 +154,7 @@ useEffect(() => {
     };
 
     try {
-      const url = order ? `http://localhost:4000/api/orders/${order._id}` : 'http://localhost:4000/api/orders';
+      const url = order ? `${import.meta.env.VITE_API_BASE_URL}/api/orders/${order._id}` : `${import.meta.env.VITE_API_BASE_URL}/api/orders`;
       const response = await fetch(url, {
         method: order ? 'PUT' : 'POST', // Usa PUT se for edição, POST se for novo pedido
         headers: {

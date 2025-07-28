@@ -48,13 +48,13 @@ const DashboardPage: React.FC = () => {
     setErrorReports(null);
     try {
       const [profitRes, highDebtsRes, topSellingRes] = await Promise.all([
-        fetch('http://localhost:4000/api/reports/daily-profit', {
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/daily-profit`, {
           headers: { Authorization: `Bearer ${userToken}` }
         }),
-        fetch('http://localhost:4000/api/reports/high-debts', { // Agora busca TODAS as dívidas pendentes
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/high-debts`, { // Agora busca TODAS as dívidas pendentes
           headers: { Authorization: `Bearer ${userToken}` }
         }),
-        fetch('http://localhost:4000/api/reports/top-selling-items', {
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/top-selling-items`, {
           headers: { Authorization: `Bearer ${userToken}` }
         })
       ]);

@@ -60,7 +60,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     };
 
     const method = product ? 'PUT' : 'POST';
-    const url = product ? `http://localhost:4000/api/products/${product._id}` : 'http://localhost:4000/api/products';
+    const url = product ? `${import.meta.env.VITE_API_BASE_URL}/api/products/${product._id}` : `${import.meta.env.VITE_API_BASE_URL}/api/products`;
 
     try {
       const response = await fetch(url, {

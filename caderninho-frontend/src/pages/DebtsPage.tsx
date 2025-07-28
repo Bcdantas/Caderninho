@@ -65,7 +65,7 @@ const DebtsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:4000/api/debts?isPaid=false', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/debts?isPaid=false`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userToken}`,
@@ -126,7 +126,7 @@ const DebtsPage: React.FC = () => {
     setLoading(true); // Pode ser um loading local ou global, por enquanto global
     setError(null);
     try {
-      const response = await fetch(`http://localhost:4000/api/debts/${debtId}/pay`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/debts/${debtId}/pay`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${userToken}`,

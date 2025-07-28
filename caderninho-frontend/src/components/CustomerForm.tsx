@@ -61,7 +61,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSave, onCancel 
     };
 
     const method = customer ? 'PUT' : 'POST';
-    const url = customer ? `http://localhost:4000/api/customers/${customer._id}` : 'http://localhost:4000/api/customers';
+    const url = customer ? `${import.meta.env.VITE_API_BASE_URL}/api/customers/${customer._id}` : `${import.meta.env.VITE_API_BASE_URL}/api/customers`;
 
     try {
       const response = await fetch(url, {

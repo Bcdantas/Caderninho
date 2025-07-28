@@ -21,7 +21,7 @@ const ProductsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:4000/api/products', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userToken}`, // Envia o token de autenticação
@@ -65,7 +65,7 @@ const ProductsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:4000/api/products/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${userToken}`,
