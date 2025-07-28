@@ -140,10 +140,10 @@ const OrdersPage: React.FC = () => {
 
   // Callback de sucesso do PaymentModal
   const handlePaymentSuccess = () => {
-    setShowPaymentModal(false); // Fecha o modal após sucesso
-    setOrderToPay(null); // Limpa o pedido
-    fetchOrders(); // Recarrega a lista de pedidos para atualizar o status
-  };
+    setShowPaymentModal(false); 
+    setOrderToPay(null);       
+    fetchOrders(); 
+};
 
   if (loading) return <div className="text-center mt-5">Carregando pedidos...</div>;
   if (error) return <div className="alert alert-danger mt-3">{error}</div>;
