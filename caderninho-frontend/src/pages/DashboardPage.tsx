@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSpinner } from '@fortawesome/free-solid-svg-icons'; // Ícone de spinner para carregamento
 
 // *** DEFINIÇÃO DE INTERFACES NECESSÁRIAS AQUI (Workaround) ***
 interface Customer {
@@ -19,12 +21,19 @@ interface TopSellingItem {
   name: string;
   totalSold: number;
 }
+
+// NOVA INTERFACE: Para agrupar débitos altos por cliente no Dashboard
+interface GroupedHighDebt {
+    customer: Customer;
+    totalAmountOver100: number; // A soma das dívidas desse cliente > R$100
+    // Não precisamos dos individualDebts aqui, só o total
+}
 // ************************************************************
 
 const DashboardPage: React.FC = () => {
-  const { username, userRole, userToken } = useAppContext();
+  const { username, userRole, userToken, showToast } = useAppContext();
   const [profitYesterday, setProfitYesterday] = useState<number | null>(null);
-  const [highDebts, setHighDebts] = useState<Debt[]>([]);
+  const [groupedHighDebts, setGroupedHighDebts] = useState<GroupedHighDebt[]>([]); // <<-- MUDANÇA AQUI
   const [topSellingItems, setTopSellingItems] = useState<TopSellingItem[]>([]);
   const [loadingReports, setLoadingReports] = useState<boolean>(true);
   const [errorReports, setErrorReports] = useState<string | null>(null);
@@ -39,16 +48,16 @@ const DashboardPage: React.FC = () => {
     setLoadingReports(true);
     setErrorReports(null);
     try {
-   const [profitRes, highDebtsRes, topSellingRes] = await Promise.all([
-    fetch('http://localhost:4000/api/reports/daily-profit', { // <-- DEVE SER localhost:4000
-        headers: { Authorization: `Bearer ${userToken}` }
-    }),
-    fetch('http://localhost:4000/api/reports/high-debts', { // <-- DEVE SER localhost:4000
-        headers: { Authorization: `Bearer ${userToken}` }
-    }),
-    fetch('http://localhost:4000/api/reports/top-selling-items', { // <-- DEVE SER localhost:4000
-        headers: { Authorization: `Bearer ${userToken}` }
-    })
+      const [profitRes, highDebtsRes, topSellingRes] = await Promise.all([
+        fetch('http://localhost:4000/api/reports/daily-profit', {
+          headers: { Authorization: `Bearer ${userToken}` }
+        }),
+        fetch('http://localhost:4000/api/reports/high-debts', {
+          headers: { Authorization: `Bearer ${userToken}` }
+        }),
+        fetch('http://localhost:4000/api/reports/top-selling-items', {
+          headers: { Authorization: `Bearer ${userToken}` }
+        })
       ]);
 
       if (!profitRes.ok) throw new Error('Falha ao buscar lucro do dia anterior.');
@@ -56,16 +65,37 @@ const DashboardPage: React.FC = () => {
       if (!topSellingRes.ok) throw new Error('Falha ao buscar itens mais vendidos.');
 
       const profitData = await profitRes.json();
-      const highDebtsData = await highDebtsRes.json();
+      const highDebtsData: Debt[] = await highDebtsRes.json(); // Pega os débitos individuais
+
       const topSellingData = await topSellingRes.json();
 
       setProfitYesterday(profitData.profitYesterday);
-      setHighDebts(highDebtsData);
       setTopSellingItems(topSellingData);
+
+      // --- Lógica para Agrupar Débitos Altos por Cliente ---
+      const highDebtsMap = new Map<string, GroupedHighDebt>();
+
+      highDebtsData.forEach(debt => {
+        if (!debt.customer || !debt.customer._id) { // Proteção contra cliente nulo
+            console.warn('Dívida alta ignorada devido a cliente nulo ou sem _id:', debt);
+            return; 
+        }
+        const customerId = debt.customer._id;
+        if (!highDebtsMap.has(customerId)) {
+          highDebtsMap.set(customerId, {
+            customer: debt.customer,
+            totalAmountOver100: 0
+          });
+        }
+        const grouped = highDebtsMap.get(customerId)!;
+        grouped.totalAmountOver100 += debt.amount; // Soma as dívidas > 100 para o cliente
+      });
+      setGroupedHighDebts(Array.from(highDebtsMap.values())); // <<-- MUDANÇA AQUI
 
     } catch (err: any) {
       setErrorReports(err.message || 'Erro ao carregar relatórios.');
       console.error('Erro ao carregar relatórios:', err);
+      showToast(err.message || 'Erro ao carregar relatórios.', 'danger');
     } finally {
       setLoadingReports(false);
     }
@@ -75,15 +105,18 @@ const DashboardPage: React.FC = () => {
     <div className="container mt-4">
       <div className="alert alert-success" role="alert">
         <h4 className="alert-heading">Bem-vindo, {username}!</h4>
-        <p className="mb-0">Você está logado como **{userRole}**.</p>
+        {/* <p className="mb-0">Este é o painel de controle do seu Caderninho.</p> <<-- REMOVIDO */}
         <hr />
-        <p className="mb-0">Este é o painel de controle do seu Caderninho.</p>
+        <p className="mb-0">Você está logado como **{userRole}**.</p> {/* Adicionei de volta uma linha útil */}
       </div>
 
       <h3 className="mt-5 mb-4">Relatórios Rápidos</h3>
 
       {loadingReports ? (
-        <div className="text-center">Carregando relatórios...</div>
+        <div className="text-center">
+          <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-primary" />
+          <p className="mt-2">Carregando relatórios...</p>
+        </div>
       ) : errorReports ? (
         <div className="alert alert-danger">{errorReports}</div>
       ) : (
@@ -105,15 +138,15 @@ const DashboardPage: React.FC = () => {
             <div className="card h-100">
               <div className="card-body">
                 <h5 className="card-title">Débitos Pendentes &gt; R$ 100</h5>
-                {highDebts.length === 0 ? (
+                {groupedHighDebts.length === 0 ? ( // <<-- MUDANÇA AQUI
                   <p className="card-text text-muted">Nenhum débito pendente acima de R$100.</p>
                 ) : (
                   <ul className="list-group list-group-flush">
-                    {highDebts.map(debt => (
-                      <li key={debt._id} className="list-group-item d-flex justify-content-between align-items-center">
-                        {debt.customer ? debt.customer.name : 'Cliente Desconhecido'}
+                    {groupedHighDebts.map(groupedHighDebt => ( // <<-- MUDANÇA AQUI
+                      <li key={groupedHighDebt.customer._id} className="list-group-item d-flex justify-content-between align-items-center">
+                        {groupedHighDebt.customer ? groupedHighDebt.customer.name : 'Cliente Desconhecido'} {/* <<-- MUDANÇA AQUI */}
                         <span className="badge bg-danger rounded-pill">
-                          R$ {debt.amount.toFixed(2).replace('.', ',')}
+                          R$ {groupedHighDebt.totalAmountOver100.toFixed(2).replace('.', ',')} {/* <<-- MUDANÇA AQUI */}
                         </span>
                       </li>
                     ))}

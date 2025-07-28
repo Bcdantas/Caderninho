@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext'; // Para pegar o token de autenticação
 import ProductForm from '../components/ProductForm'; // Formulário para adicionar/editar produtos
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'; // Componente de ícone
+import { faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons'; // Ícones específicos
 
 const ProductsPage: React.FC = () => {
   const { userToken } = useAppContext();
@@ -106,9 +108,9 @@ const ProductsPage: React.FC = () => {
         />
       ) : (
         <>
-          <button className="btn btn-primary mb-3" onClick={handleAddProduct}>
-            Adicionar Produto
-          </button>
+        <button className="btn btn-primary mb-3" onClick={handleAddProduct}>
+                <FontAwesomeIcon icon={faPlus} className="me-2" /> Adicionar Produto
+        </button>
 
           {products.length === 0 ? (
             <div className="alert alert-info">Nenhum produto cadastrado.</div>
@@ -131,18 +133,20 @@ const ProductsPage: React.FC = () => {
                       <td>{product.description || 'N/A'}</td>
                       <td>
                         <button
-                          className="btn btn-warning btn-sm me-2"
-                          onClick={() => handleEditProduct(product)}
+                            className="btn btn-warning btn-sm me-2"
+                            onClick={() => handleEditProduct(product)}
+                            title="Editar" // Adicionado title para acessibilidade
                         >
-                          Editar
+                            <FontAwesomeIcon icon={faEdit} />
                         </button>
                         <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => handleDeleteProduct(product._id)}
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDeleteProduct(product._id)}
+                            title="Deletar" // Adicionado title para acessibilidade
                         >
-                          Deletar
+                            <FontAwesomeIcon icon={faTrash} />
                         </button>
-                      </td>
+                    </td>
                     </tr>
                   ))}
                 </tbody>
