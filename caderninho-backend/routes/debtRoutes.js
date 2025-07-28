@@ -1,13 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const Debt = require('../models/Debt'); // Importa o modelo de Dívida
+const { protect } = require('../middleware/authMiddleware');
 
-// Middleware de proteção de rota (autenticação) - AINDA NÃO TEMOS
-// const { protect } = require('../middleware/authMiddleware');
+const Order = require('../models/Order') // <<-- ADICIONE ESTA LINHA!
+const Debt = require('../models/Debt'); // Já existente
+const Customer = require('../models/Customer');
 
-// @desc    Obter todas as dívidas (opcionalmente filtradas por pago/não pago)
-// @route   GET /api/debts?isPaid=true/false
-// @access  Private (futuramente)
+
 router.get('/', async (req, res) => {
     try {
         let filter = {};
@@ -81,9 +80,11 @@ router.put('/:id/pay', async (req, res) => {
         } else {
             res.status(404).json({ message: 'Dívida não encontrada.' });
         }
-    } catch (error) {
-        res.status(500).json({ message: 'Erro ao marcar dívida como paga', error: error.message });
-    }
+    } catch (error) { // <<-- AQUI!
+    console.error('Erro detalhado ao marcar dívida como paga:', error.message); // Mensagem do erro
+    console.error(error.stack); // <<-- ADICIONE ESTA LINHA para a pilha de chamadas completa
+    res.status(500).json({ message: 'Erro ao marcar dívida como paga', error: error.message });
+}
 });
 
 module.exports = router;
