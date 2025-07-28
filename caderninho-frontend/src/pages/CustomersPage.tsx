@@ -128,43 +128,38 @@ const CustomersPage: React.FC = () => {
           ) : (
             <div className="table-responsive">
               <table className="table table-striped table-hover">
-               <thead>
-            <tr>
-              <th>Nome</th> {/* Isso é OK */}
-              <th>Telefone</th> {/* Isso é OK */}
-              <th>Dívida Total</th> {/* Isso é OK */}
-              <th>Ações</th> {/* Isso é OK */}
-            </tr> {/* Isso é OK */}
-          </thead>
-                <tbody>
-                  {customers.map(customer => (
-                    <tr key={customer._id}>
-                      <td>{customer.name}</td>
-                      <td>{customer.phone || 'N/A'}</td>
-                      <td>
-                        {customer.totalDebt !== undefined ? (
-                          <span className={customer.totalDebt > 0 ? 'text-danger fw-bold' : 'text-success'}>
-                            R$ {customer.totalDebt.toFixed(2).replace('.', ',')}
-                          </span>
-                        ) : 'R$ 0,00'} {/* Exibe a dívida formatada */}
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-warning btn-sm me-2"
-                          onClick={() => handleEditCustomer(customer)}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => handleDeleteCustomer(customer._id)}
-                        >
-                          Deletar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+               <thead><tr>
+          <th>Nome</th><th>Telefone</th><th>Dívida Total</th><th>Ações</th>
+        </tr></thead>
+        <tbody>
+          {customers.map(customer => (
+            <tr key={customer._id}>
+              <td>{customer.name}</td>
+              <td>{customer.phone || 'N/A'}</td>
+              <td>
+                {customer.totalDebt !== undefined ? (
+                  <span className={customer.totalDebt > 0 ? 'text-danger fw-bold' : 'text-success'}>
+                    R$ {customer.totalDebt.toFixed(2).replace('.', ',')}
+                  </span>
+                ) : 'R$ 0,00'}
+              </td>
+              <td>
+                <button
+                  className="btn btn-warning btn-sm me-2"
+                  onClick={() => handleEditCustomer(customer)}
+                >
+                  Editar
+                </button>
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={() => handleDeleteCustomer(customer._id)}
+                >
+                  Deletar
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
               </table>
             </div>
           )}
