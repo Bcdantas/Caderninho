@@ -23,6 +23,16 @@ interface FormOrderItem {
 }
 // **************************************************************
 
+// Interface mínima para Order (ajuste conforme necessário ou importe do seu modelo real)
+interface Order {
+  _id: string;
+  customer: Customer;
+  items: Array<{
+    product: Product;
+    quantity: number;
+  }>;
+}
+
 interface OrderFormProps {
   order?: Order | null; 
   onSave: () => void;

@@ -25,43 +25,56 @@ interface PaymentModalProps {
 const PaymentModal: React.FC<PaymentModalProps> = ({ order, show, onClose, onPaymentSuccess }) => {
   const { userToken, showToast } = useAppContext();
   const modalRef = useRef<HTMLDivElement>(null);
+  const bsModalInstance = useRef<Modal | null>(null); // Ref para a instância do Bootstrap Modal
+
   const [valorPago, setValorPago] = useState<string>('');
   const [metodoPagamento, setMetodoPagamento] = useState<string>('Dinheiro');
   const [troco, setTroco] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Efeito para sincronizar a visibilidade do modal
+  // Efeito para sincronizar a visibilidade do modal e gerenciar a instância Bootstrap Modal
   useEffect(() => {
     if (!modalRef.current) return;
 
-    const bsModal = new Modal(modalRef.current, { backdrop: 'static', keyboard: false }); // Modal estático
+    // Cria a instância do Modal Bootstrap apenas UMA VEZ
+    if (!bsModalInstance.current) {
+      bsModalInstance.current = new Modal(modalRef.current, { backdrop: 'static', keyboard: false });
+      // Adiciona o listener para quando o modal é realmente fechado pelo Bootstrap
+      // Este listener vai chamar o onClose da prop, que é quem atualiza o estado 'showPaymentModal' na OrdersPage
+      modalRef.current.addEventListener('hidden.bs.modal', onClose);
+    }
+
+    // Controla a exibição/ocultação do modal com base na prop 'show'
     if (show) {
-      bsModal.show();
+      bsModalInstance.current.show();
       // Resetar estados quando o modal é aberto
-      setValorPago(order?.totalAmount.toFixed(2).replace('.', ',') || ''); // Preenche com o total do pedido
+      setValorPago(order?.totalAmount.toFixed(2) || ''); // Preenche com o total do pedido (com ponto)
       setMetodoPagamento('Dinheiro');
       setTroco(0);
       setError(null);
     } else {
-      bsModal.hide();
+      // Usa a instância existente para esconder, se ela existir e o modal estiver visível
+      // Verifica se o modalRef.current tem a classe 'show' para saber se está visível antes de esconder
+      if (bsModalInstance.current && modalRef.current.classList.contains('show')) {
+        bsModalInstance.current.hide();
+      }
     }
 
-    // Listener para quando o modal é realmente fechado pelo Bootstrap
-    modalRef.current.addEventListener('hidden.bs.modal', onClose);
-
-    // Cleanup
+    // Cleanup: Remove o listener e destrói a instância do modal quando o componente é desmontado
     return () => {
-      if (modalRef.current) {
+      if (modalRef.current && bsModalInstance.current) {
         modalRef.current.removeEventListener('hidden.bs.modal', onClose);
+        bsModalInstance.current.dispose(); // Destrói a instância para evitar vazamentos de memória
+        bsModalInstance.current = null;
       }
     };
-  }, [show, order, onClose]);
+  }, [show, order, onClose]); // Dependências do useEffect
 
   // Efeito para calcular o troco
   useEffect(() => {
     if (metodoPagamento === 'Dinheiro' && order) {
-      const pago = parseFloat(valorPago.replace(',', '.'));
+      const pago = parseFloat(valorPago.replace(',', '.')); // Converte a vírgula do input para ponto
       const total = order.totalAmount;
       if (!isNaN(pago) && pago >= total) {
         setTroco(pago - total);
@@ -92,14 +105,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ order, show, onClose, onPay
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:4000/api/orders/${order._id}/pay`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/orders/${order._id}/pay`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userToken}`,
         },
         body: JSON.stringify({
-          paidAmount: parseFloat(valorPago.replace(',', '.')),
+          paidAmount: parseFloat(valorPago.replace(',', '.')), // Garante que o valor enviado seja número com ponto
           paymentMethod: metodoPagamento,
         }),
       });
@@ -111,7 +124,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ order, show, onClose, onPay
 
       showToast('Pagamento registrado com sucesso!', 'success');
       onPaymentSuccess(); // Notifica a página Orders que o pagamento foi feito
-      onClose(); // Fecha o modal
+
+      // Fechar o modal explicitamente via API do Bootstrap APÓS o sucesso
+      if (bsModalInstance.current) {
+        bsModalInstance.current.hide();
+      }
+
     } catch (err: any) {
       setError(err.message || 'Erro ao registrar pagamento.');
       showToast(err.message || 'Erro ao registrar pagamento.', 'danger');
@@ -121,19 +139,22 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ order, show, onClose, onPay
     }
   };
 
-  if (!order) return null; // Não renderiza se não houver pedido
+  // Não renderiza o modal se não houver pedido ou se o modal não deve ser mostrado
+  if (!order) return null; 
 
   return (
+    // Atenção: As classes 'modal fade' e o id são importantes para o Bootstrap
     <div className="modal fade" id="paymentModal" tabIndex={-1} aria-labelledby="paymentModalLabel" aria-hidden="true" ref={modalRef}>
       <div className="modal-dialog">
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title" id="paymentModalLabel">Registrar Pagamento do Pedido</h5>
+            {/* O botão 'btn-close' do Bootstrap tem data-bs-dismiss="modal" que o fecha */}
             <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div className="modal-body">
             {error && <div className="alert alert-danger">{error}</div>}
-
+            
             <p>Cliente: <strong>{order.customer?.name || 'Desconhecido'}</strong></p>
             <p>Total do Pedido: <strong className="text-primary fs-4">R$ {order.totalAmount.toFixed(2).replace('.', ',')}</strong></p>
 

@@ -186,8 +186,8 @@ const OrdersPage: React.FC = () => {
                       <td>
                         <ul className="list-unstyled mb-0">
                           {order.items.map(item => (
-                            <li key={item.product?._id || item.product}>
-                              {item.product ? item.product.name : 'Produto Desconhecido'} (x{item.quantity})
+                            <li key={typeof item.product === 'string' ? item.product : item.product?._id || 'produto-desconhecido'}>
+                              {item.product ? (typeof item.product === 'string' ? item.product : item.product.name) : 'Produto Desconhecido'} (x{item.quantity})
                             </li>
                           ))}
                         </ul>
