@@ -1,98 +1,105 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-interface ToastMessage { 
-  id: string;
-  message: string;
-  type: 'success' | 'danger' | 'info' | 'warning';
-}
-
-// 1. Definir a interface para o que o contexto vai prover
-interface AuthContextType {
-  isAuthenticated: boolean;
-  userToken: string | null;
-  userRole: string | null;
+// Definição das interfaces
+interface AppContextType {
   username: string | null;
-  login: (token: string, role: string, username: string) => void;
+  userRole: string | null;
+  userToken: string | null;
+  login: (token: string, name: string, role: string) => void;
   logout: () => void;
-  showToast: (message: string, type?: 'success' | 'danger' | 'info' | 'warning') => void; 
-  toasts: ToastMessage[]; // <<-- ADICIONE ESTA LINHA
-  removeToast: (id: string) => void; // <<-- ADICIONE ESTA LINHA
+  showToast: (message: string, type: 'success' | 'danger' | 'info') => void;
 }
 
-// 2. Criar o Contexto
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// 3. Criar o Provider (o componente que vai prover o contexto para a aplicação)
-interface AuthProviderProps {
-  children: ReactNode;
+interface Toast {
+  id: number;
+  message: string;
+  type: 'success' | 'danger' | 'info';
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [userToken, setUserToken] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [username, setUsernameState] = useState<string | null>(null); 
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+// Criação do Contexto
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// Provedor do Contexto
+export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Inicializa o estado lendo do localStorage
+  const [username, setUsername] = useState<string | null>(localStorage.getItem('username'));
+  const [userRole, setUserRole] = useState<string | null>(localStorage.getItem('userRole'));
+  const [userToken, setUserToken] = useState<string | null>(localStorage.getItem('userToken'));
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const navigate = useNavigate();
 
-  // Ao carregar, verifica se há token no localStorage
-  useEffect(() => {
-    const token = localStorage.getItem('userToken');
-    const role = localStorage.getItem('userRole');
-    const storedUsername = localStorage.getItem('username');
-
-    if (token && role && storedUsername) {
-      setIsAuthenticated(true);
-      setUserToken(token);
-      setUserRole(role);
-      setUsernameState(storedUsername);
-    }
+  // Função de login
+  const login = useCallback((token: string, name: string, role: string) => {
+    setUserToken(token);
+    setUsername(name);
+    setUserRole(role);
+    // Salva no localStorage
+    localStorage.setItem('userToken', token);
+    localStorage.setItem('username', name);
+    localStorage.setItem('userRole', role);
+    showToast('Login realizado com sucesso!', 'success');
   }, []);
 
-  const login = (token: string, role: string, user: string) => {
-    setIsAuthenticated(true);
-    setUserToken(token);
-    setUserRole(role);
-    setUsernameState(user);
-    localStorage.setItem('userToken', token);
-    localStorage.setItem('userRole', role);
-    localStorage.setItem('username', user);
-    navigate('/dashboard'); // Redireciona para o dashboard (criaremos esta rota em breve)
-  };
-
-  const logout = () => {
-    setIsAuthenticated(false);
+  // Função de logout
+  const logout = useCallback(() => {
     setUserToken(null);
+    setUsername(null);
     setUserRole(null);
-    setUsernameState(null);
+    // Remove do localStorage
     localStorage.removeItem('userToken');
-    localStorage.removeItem('userRole');
     localStorage.removeItem('username');
-    navigate('/login');
-  };
+    localStorage.removeItem('userRole');
+    showToast('Você foi desconectado.', 'info');
+    navigate('/login'); // Redireciona para a página de login
+  }, [navigate]);
 
-    const showToast = (message: string, type: 'success' | 'danger' | 'info' | 'warning' = 'info') => { // <<-- ADICIONE ESTA FUNÇÃO
-    const id = Math.random().toString(36).substring(2, 9); // Gera um ID único para o toast
-    setToasts(prevToasts => [...prevToasts, { id, message, type }]);
-  };
-const removeToast = (id: string) => { // <<-- ADICIONE ESTA FUNÇÃO
-    setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
-  };
+  // Função para mostrar toasts
+  const showToast = useCallback((message: string, type: 'success' | 'danger' | 'info') => {
+    const id = Date.now();
+    setToasts((prevToasts) => [...prevToasts, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
+    }, 5000); // Toast desaparece após 5 segundos
+  }, []);
 
-return (
-    <AuthContext.Provider value={{ isAuthenticated, userToken, userRole, username, login, logout, showToast, toasts, removeToast }}>
-        {children}
-    </AuthContext.Provider>
-);
+  return (
+    <AppContext.Provider value={{ username, userRole, userToken, login, logout, showToast }}>
+      {children}
+      {/* Renderização dos Toasts */}
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 1050, // Bootstrap modal z-index é 1050
+      }}>
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`alert alert-${toast.type} alert-dismissible fade show`}
+            role="alert"
+            style={{ minWidth: '250px', marginBottom: '10px' }}
+          >
+            {toast.message}
+            <button
+              type="button"
+              className="btn-close"
+              data-bs-dismiss="alert"
+              aria-label="Close"
+              onClick={() => setToasts((prevToasts) => prevToasts.filter((t) => t.id !== toast.id))}
+            ></button>
+          </div>
+        ))}
+      </div>
+    </AppContext.Provider>
+  );
 };
 
-// 4. Hook customizado para usar o contexto
+// Hook personalizado para usar o contexto
 export const useAppContext = () => {
-  const context = useContext(AuthContext);
+  const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error('useAppContext deve ser usado dentro de um AuthProvider');
+    throw new Error('useAppContext must be used within an AppProvider');
   }
   return context;
 };

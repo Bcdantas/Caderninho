@@ -1,46 +1,61 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import App from './App.tsx'; // O componente App agora é o layout principal
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import App from './App.tsx'; // Componente App é o layout principal
 import LoginPage from './pages/LoginPage.tsx';
-import DashboardPage from './pages/DashboardPage.tsx'; // Importa a nova DashboardPage
-import './index.css'; // Importa o CSS global
-import 'bootstrap/dist/css/bootstrap.min.css'; // Importa o CSS do Bootstrap 
-import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // Importa o JS do Bootstrap para funcionalidades interativas
-import ProductsPage from './pages/ProductsPage.tsx'; // Importa a página de produtos 
-import CustomersPage from './pages/CustomersPage.tsx'; // Importa a página de clientes 
-import OrdersPage from './pages/OrdersPage.tsx'; // Importa a página de pedidos
-import DebtsPage from './pages/DebtsPage.tsx'; // Importa a página de dívidas
-import ProfitPage from './pages/ProfitPage.tsx'; // Importa a página de lucro
-import ProtectedRoute from './components/ProtectedRoute.tsx'; // Importa o ProtectedRoute
-import { AuthProvider } from './context/AppContext.tsx';
+import DashboardPage from './pages/DashboardPage.tsx';
+import ProductsPage from './pages/ProductsPage.tsx';
+import CustomersPage from './pages/CustomersPage.tsx';
+import OrdersPage from './pages/OrdersPage.tsx';
+import DebtsPage from './pages/DebtsPage.tsx';
+import ProfitPage from './pages/ProfitPage.tsx';
+import ProtectedRoute from './components/ProtectedRoute.tsx';
+import { AppProvider, useAppContext } from './context/AppContext.tsx'; // Usando AppProvider
 
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // JS do Bootstrap
+import './index.css';
+
+// Novo componente para a lógica da rota raiz
+const RootRedirect: React.FC = () => {
+  const { userToken } = useAppContext();
+  // Se tiver token, redireciona para dashboard, senão para login
+  return userToken ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
+};
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Router>
-      <AuthProvider> {/* O AuthProvider deve envolver TODAS as Routes */}
-        <Routes>
-          {/* Rota de Login (Não Protegida) */}
-          <Route path="/login" element={<LoginPage />} />
-          {/* Redireciona a raiz para a página de login por padrão */}
-          <Route path="/" element={<LoginPage />} /> 
+      <AppProvider> {/* Este é o provedor do contexto */}
+        <Routes> {/* <<-- INÍCIO DO BLOCO DE ROTAS -->> */}
 
-          {/* Rotas Protegidas - Usam o ProtectedRoute como guardião */}
-          <Route path="/" element={<ProtectedRoute />}>
-            {/* O App é o layout para as rotas aninhadas aqui dentro */}
-            <Route path="/" element={<App />}> 
-              <Route path="dashboard" element={<DashboardPage />} /> {/* Rota explícita para o dashboard */}
-              <Route path="products" element={<ProductsPage />} /> {/* Rota para a página de produtos */}
-              <Route path="customers" element={<CustomersPage />} /> {/* Rota para a página de clientes */}
-              <Route path="orders" element={<OrdersPage />} /> {/* Rota para a página de pedidos */}
-              <Route path="debts" element={<DebtsPage />} /> {/* Rota para a página de dívidas */}
-              <Route path="profit" element={<ProfitPage />} /> {/* Rota para a página de lucro */}
-     
-            </Route>
-          </Route>
-        </Routes>
-      </AuthProvider>
+          {/* Rota Raiz: Decide se vai para login ou dashboard baseado no token */}
+          <Route path="/" element={<RootRedirect />} /> 
+
+          {/* Rota de Login (explícita) */}
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* Rotas Protegidas:
+            - Usa ProtectedRoute como "guarda" (verifica autenticação)
+            - Usa App como o layout base (Navbar, Footer, Outlet) para todas as páginas protegidas
+          */}
+          <Route element={<ProtectedRoute />}> {/* <<-- ROTA WRAPPER PARA PROTEÇÃO */}
+            <Route path="/" element={<App />}> {/* <<-- ROTA DE LAYOUT PARA ÁREA PROTEGIDA */}
+              {/* Rotas Protegidas Específicas (auto-fechantes) */}
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="products" element={<ProductsPage />} />
+              <Route path="customers" element={<CustomersPage />} />
+              <Route path="orders" element={<OrdersPage />} />
+              <Route path="debts" element={<DebtsPage />} />
+              <Route path="profit" element={<ProfitPage />} />
+            </Route> {/* <<-- FECHAMENTO DA ROTA DE LAYOUT DE APP */}
+          </Route> {/* <<-- FECHAMENTO DA ROTA WRAPPER ProtectedRoute */}
+
+          {/* Rota para 404 (opcional) */}
+          {/* <Route path="*" element={<div>Página Não Encontrada</div>} /> */}
+
+        </Routes> {/* <<-- FIM DO BLOCO DE ROTAS -->> */}
+      </AppProvider>
     </Router>
   </React.StrictMode>,
 );
