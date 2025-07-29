@@ -34,8 +34,13 @@ function App() {
                       <Link className="nav-link" to="/orders">Pedidos</Link>
                     </li>
                     <li className="nav-item">
-                      <Link className="nav-link" to="/debts">Dívidas</Link>
+                      <Link className="nav-link" to="/debts">Dívidas</Link> 
                     </li>
+                    {userRole === 'admin' && ( // <<-- ADICIONADO: Visível apenas para Admin
+                      <li className="nav-item">
+                        <Link className="nav-link" to="/profit">Lucro</Link>
+                      </li>
+                    )}  
                   </>
                 </>
               )}

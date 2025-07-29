@@ -11,6 +11,7 @@ import ProductsPage from './pages/ProductsPage.tsx'; // Importa a página de pro
 import CustomersPage from './pages/CustomersPage.tsx'; // Importa a página de clientes 
 import OrdersPage from './pages/OrdersPage.tsx'; // Importa a página de pedidos
 import DebtsPage from './pages/DebtsPage.tsx'; // Importa a página de dívidas
+import ProfitPage from './pages/ProfitPage.tsx'; // Importa a página de lucro
 import ProtectedRoute from './components/ProtectedRoute.tsx'; // Importa o ProtectedRoute
 import { AuthProvider } from './context/AppContext.tsx';
 
@@ -34,6 +35,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="customers" element={<CustomersPage />} /> {/* Rota para a página de clientes */}
               <Route path="orders" element={<OrdersPage />} /> {/* Rota para a página de pedidos */}
               <Route path="debts" element={<DebtsPage />} /> {/* Rota para a página de dívidas */}
+              <Route path="profit" element={<ProfitPage />} /> {/* Rota para a página de lucro */}
      
             </Route>
           </Route>
