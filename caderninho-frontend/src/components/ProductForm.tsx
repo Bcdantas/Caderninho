@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext'; // Para pegar o token
 
+// Defina a interface Product ou importe de onde ela está definida
+interface Product {
+  _id: string;
+  name: string;
+  price: number;
+  description?: string;
+}
+
 interface ProductFormProps {
   product?: Product | null; // Produto opcional para edição
   onSave: () => void; // Callback após salvar

@@ -17,15 +17,9 @@ if (!userToken) { // Verifica o token diretamente
         console.log('ProtectedRoute: Token AUSENTE. Redirecionando para login.'); // <<-- NOVO LOG
         return <Navigate to="/login" replace />;
     }
-    
-  if (loading) {
-    return <div>Carregando autenticação...</div>;
-  }
 
   // Se não estiver autenticado, redireciona para a página de login
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />; // 'replace' para não adicionar a rota protegida ao histórico do navegador
-  }
+  // (Removido: checagem de isAuthenticated pois não está definido)
 
   // Se houver papéis permitidos e o papel do usuário não estiver na lista, redireciona
   if (allowedRoles && userRole && !allowedRoles.includes(userRole)) {
