@@ -3,8 +3,22 @@ import { Outlet, Link } from 'react-router-dom';
 import { useAppContext } from './context/AppContext';
 import ToastNotification from './components/ToastNotification';
 
+// Defina a interface ToastMessage
+interface ToastMessage {
+  id: string;
+  type: 'success' | 'danger' | 'info' | 'warning';
+  message: string;
+}
+
 function App() {
-  const { isAuthenticated, logout, username, userRole, toasts, removeToast } = useAppContext();
+  const { logout, username, userRole, userToken } = useAppContext();
+
+  // Adicione o estado para toasts e a função removeToast
+  const [toasts, setToasts] = React.useState<ToastMessage[]>([]);
+
+  const removeToast = (id: string) => {
+    setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
+  };
 
   return (
     <div className="d-flex flex-column min-vh-100 bg-light"> {/* Layout principal com Bootstrap */}
@@ -17,7 +31,7 @@ function App() {
           </button>
           <div className="collapse navbar-collapse" id="navbarNav">
             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-              {isAuthenticated && (
+              {userToken && (
                 <>
                   {/* Por enquanto, só o link para o Dashboard. Outros links virão depois. */}
                   <li className="nav-item">
@@ -46,7 +60,7 @@ function App() {
               )}
             </ul>
             <ul className="navbar-nav">
-              {isAuthenticated && (
+              {userToken && (
                 <>
                   <li className="nav-item">
                     <span className="nav-link text-white">Olá, {username} ({userRole})</span>
