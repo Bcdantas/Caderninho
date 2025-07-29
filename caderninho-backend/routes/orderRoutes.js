@@ -114,7 +114,7 @@ router.get('/:id', async (req, res) => {
 // @desc    Atualizar status de pagamento de um pedido e sua dívida associada
 // @route   PUT /api/orders/:id/pay
 // @access  Private (futuramente)
-router.put('/:id/pay', protect, async (req, res) => { // <<-- ESTE BLOCO DEVE ESTAR PRESENTE E NÃO COMENTADO!
+router.put('/:id/pay', protect, async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
 
@@ -155,8 +155,8 @@ router.put('/:id/pay', protect, async (req, res) => {
             }
 
             order.isPaid = true;
-            order.paidAmount = paidAmount || order.totalAmount; // Se paidAmount não for enviado, assume totalAmount
-            order.paymentMethod = paymentMethod || 'Dinheiro'; // Padrão 'Dinheiro' se não especificado
+            order.paidAmount = Number(paidAmount);
+            order.paymentMethod = paymentMethod;
             order.paymentDate = new Date(); // Registra a data/hora do pagamento
 
             const updatedOrder = await order.save();
