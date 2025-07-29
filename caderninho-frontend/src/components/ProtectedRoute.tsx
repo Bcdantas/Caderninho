@@ -7,10 +7,17 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
-  const { isAuthenticated, userRole, loading } = useAppContext(); // Pega o status de autenticação e papel do contexto
+    const { userToken, userRole } = useAppContext();// Pega o status de autenticação e papel do contexto
 
-  // Se o contexto ainda estiver carregando (verificando localStorage), podemos mostrar um loader ou null
-  // Para fins de teste inicial, vamos apenas retornar null ou um div simples.
+  console.log('--- ProtectedRoute Check ---'); // <<-- NOVO LOG
+  console.log('userToken em ProtectedRoute:', userToken ? 'PRESENTE' : 'AUSENTE'); // <<-- NOVO LOG
+  console.log('userRole em ProtectedRoute:', userRole);
+
+if (!userToken) { // Verifica o token diretamente
+        console.log('ProtectedRoute: Token AUSENTE. Redirecionando para login.'); // <<-- NOVO LOG
+        return <Navigate to="/login" replace />;
+    }
+    
   if (loading) {
     return <div>Carregando autenticação...</div>;
   }

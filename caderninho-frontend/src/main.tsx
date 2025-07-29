@@ -17,8 +17,11 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // JS do Bootstrap
 import './index.css';
 
 // Componente que engloba todas as rotas e usa o contexto
-const AppRouter: React.FC = () => { // Renomeado de RootRedirect para AppRouter
-  const { userToken } = useAppContext(); // <<-- AGORA USA USEAPPCONTEXT DENTRO DO APPPROVIDER
+const AppRouter: React.FC = () => {
+    const { userToken } = useAppContext(); // userToken já está aqui
+
+    console.log('--- AppRouter (main.tsx) Check ---'); // <<-- NOVO LOG
+    console.log('userToken em AppRouter:', userToken ? 'PRESENTE' : 'AUSENTE');
 
   return (
     <Routes>

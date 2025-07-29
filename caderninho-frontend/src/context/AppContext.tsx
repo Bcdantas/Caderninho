@@ -31,18 +31,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setUserToken(token);
     setUsername(name);
     setUserRole(role);
-    // showToast('Login realizado com sucesso!', 'success'); // Opcional, o Login Page já dá o toast
-    navigate('/dashboard'); // Redireciona para o dashboard
-  }, [navigate]);
+    localStorage.setItem('userToken', token);
+    localStorage.setItem('username', name);
+    localStorage.setItem('userRole', role);
+    console.log('*** AppContext: Login bem-sucedido, estado e localStorage atualizados. Token:', token ? 'SIM' : 'NÃO', 'Role:', role); // <<-- NOVO LOG
+    showToast('Login realizado com sucesso!', 'success');
+    navigate('/dashboard'); // Tenta redirecionar
+}, [navigate, showToast]);
 
   // Função de logout (APENAS LIMPA ESTADO, NÃO USA localStorage AQUI)
-  const logout = useCallback(() => {
+  const logout = useCallback(() => { // Adicionado showToast como dependência
     setUserToken(null);
     setUsername(null);
     setUserRole(null);
-    // showToast('Você foi desconectado.', 'info'); // Opcional, o Logout pode dar o toast
-    navigate('/login'); // Redireciona para a página de login
-  }, [navigate]);
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userRole');
+    console.log('*** AppContext: Logout realizado, estado e localStorage limpos.'); // <<-- NOVO LOG
+    showToast('Você foi desconectado.', 'info');
+    navigate('/login');
+}, [navigate, showToast]);
 
   // Função para mostrar toasts (como estava)
   const showToast = useCallback((message: string, type: 'success' | 'danger' | 'info' | 'warning' = 'info') => {
