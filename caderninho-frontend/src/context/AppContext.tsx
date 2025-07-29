@@ -8,13 +8,9 @@ interface AppContextType {
   userToken: string | null;
   login: (token: string, name: string, role: string) => void;
   logout: () => void;
-  showToast: (message: string, type: 'success' | 'danger' | 'info') => void;
-}
-
-interface Toast {
-  id: number;
-  message: string;
-  type: 'success' | 'danger' | 'info';
+  showToast: (message: string, type: 'success' | 'danger' | 'info' | 'warning') => void; // Tipo 'warning' adicionado
+  toasts: ToastMessage[]; // Toasts adicionado
+  removeToast: (id: string) => void; // removeToast adicionado
 }
 
 // Criação do Contexto
@@ -22,75 +18,53 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Provedor do Contexto
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Inicializa o estado lendo do localStorage
-  const [username, setUsername] = useState<string | null>(localStorage.getItem('username'));
-  const [userRole, setUserRole] = useState<string | null>(localStorage.getItem('userRole'));
-  const [userToken, setUserToken] = useState<string | null>(localStorage.getItem('userToken'));
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  // Estado de autenticação (NÃO lê do localStorage na inicialização para evitar loops complexos agora)
+  const [username, setUsername] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userToken, setUserToken] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]); // Estado para os toasts
+
   const navigate = useNavigate();
 
-  // Função de login
+  // Função de login (APENAS SETA ESTADO, NÃO USA localStorage AQUI)
   const login = useCallback((token: string, name: string, role: string) => {
     setUserToken(token);
     setUsername(name);
     setUserRole(role);
-    // Salva no localStorage
-    localStorage.setItem('userToken', token);
-    localStorage.setItem('username', name);
-    localStorage.setItem('userRole', role);
-    showToast('Login realizado com sucesso!', 'success');
-  }, []);
+    // showToast('Login realizado com sucesso!', 'success'); // Opcional, o Login Page já dá o toast
+    navigate('/dashboard'); // Redireciona para o dashboard
+  }, [navigate]);
 
-  // Função de logout
+  // Função de logout (APENAS LIMPA ESTADO, NÃO USA localStorage AQUI)
   const logout = useCallback(() => {
     setUserToken(null);
     setUsername(null);
     setUserRole(null);
-    // Remove do localStorage
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('username');
-    localStorage.removeItem('userRole');
-    showToast('Você foi desconectado.', 'info');
+    // showToast('Você foi desconectado.', 'info'); // Opcional, o Logout pode dar o toast
     navigate('/login'); // Redireciona para a página de login
   }, [navigate]);
 
-  // Função para mostrar toasts
-  const showToast = useCallback((message: string, type: 'success' | 'danger' | 'info') => {
-    const id = Date.now();
-    setToasts((prevToasts) => [...prevToasts, { id, message, type }]);
+  // Função para mostrar toasts (como estava)
+  const showToast = useCallback((message: string, type: 'success' | 'danger' | 'info' | 'warning' = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prevToasts => [...prevToasts, { id, message, type }]);
     setTimeout(() => {
-      setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
-    }, 5000); // Toast desaparece após 5 segundos
+      setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
+    }, 5000);
   }, []);
 
+  // Função para remover toasts (como estava)
+  const removeToast = useCallback((id: string) => {
+    setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
+  }, []);
+
+  // REMOVIDO: O useEffect que lia do localStorage e redirecionava.
+  // A persistência de login será implementada de outra forma no futuro.
+
   return (
-    <AppContext.Provider value={{ username, userRole, userToken, login, logout, showToast }}>
+    <AppContext.Provider value={{ username, userRole, userToken, login, logout, showToast, toasts, removeToast }}>
       {children}
-      {/* Renderização dos Toasts */}
-      <div style={{
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        zIndex: 1050, // Bootstrap modal z-index é 1050
-      }}>
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`alert alert-${toast.type} alert-dismissible fade show`}
-            role="alert"
-            style={{ minWidth: '250px', marginBottom: '10px' }}
-          >
-            {toast.message}
-            <button
-              type="button"
-              className="btn-close"
-              data-bs-dismiss="alert"
-              aria-label="Close"
-              onClick={() => setToasts((prevToasts) => prevToasts.filter((t) => t.id !== toast.id))}
-            ></button>
-          </div>
-        ))}
-      </div>
+      {/* O container de toasts é renderizado no App.tsx */}
     </AppContext.Provider>
   );
 };
