@@ -1,28 +1,28 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
-const Order = require('../models/Order');
-const Debt = require('../models/Debt');
-const Product = require('../models/Product');
+const Order = require('../models/Order'); // Verifique: seu arquivo é 'Order.js'?
+const Debt = require('../models/Debt'); // Verifique: seu arquivo é 'Debt.js'?
+const Product = require('../models/Product'); // Verifique: seu arquivo é 'Product.js'?
+const Payment = require('../models/Payment'); // <<-- NOVO: Modelo de Pagamento
 
 // @desc    Obter lucro total de todos os tempos
 // @route   GET /api/reports/total-profit
 // @access  Private (Admin only)
 router.get('/total-profit', protect, authorizeRoles('admin'), async (req, res) => {
     try {
-        const result = await Order.aggregate([
-            { $match: { isPaid: true } }, // Apenas pedidos pagos
+        const result = await Payment.aggregate([ // <<-- MUDANÇA: AGORA USA Payment
             {
                 $group: {
                     _id: null,
-                    totalProfit: { $sum: '$paidAmount' } // Soma o valor pago
+                    totalProfit: { $sum: '$amount' } // Soma o campo 'amount' do Payment
                 }
             }
         ]);
 
         res.json({ totalProfit: result.length > 0 ? result[0].totalProfit : 0 });
     } catch (error) {
-        console.error('Erro ao calcular lucro total:', error.message);
+        console.error('Erro ao calcular lucro total (Payment):', error.message);
         console.error(error.stack);
         res.status(500).json({ message: 'Erro ao calcular lucro total', error: error.message });
     }
@@ -39,24 +39,23 @@ router.get('/today-profit', protect, authorizeRoles('admin'), async (req, res) =
         const endOfToday = new Date();
         endOfToday.setHours(23, 59, 59, 999); // Fim do dia (23:59:59)
 
-        const result = await Order.aggregate([
+        const result = await Payment.aggregate([ // <<-- MUDANÇA: AGORA USA Payment
             {
                 $match: {
-                    isPaid: true,
-                    paymentDate: { $gte: startOfToday, $lte: endOfToday } // Pedidos pagos hoje
+                    paymentDate: { $gte: startOfToday, $lte: endOfToday } // Filtra por paymentDate
                 }
             },
             {
                 $group: {
                     _id: null,
-                    todayProfit: { $sum: '$paidAmount' } // Soma o valor pago
+                    todayProfit: { $sum: '$amount' } // Soma o campo 'amount' do Payment
                 }
             }
         ]);
 
         res.json({ todayProfit: result.length > 0 ? result[0].todayProfit : 0 });
     } catch (error) {
-        console.error('Erro ao calcular lucro de hoje:', error.message);
+        console.error('Erro ao calcular lucro de hoje (Payment):', error.message);
         console.error(error.stack);
         res.status(500).json({ message: 'Erro ao calcular lucro de hoje', error: error.message });
     }
@@ -157,17 +156,16 @@ router.get('/daily-profit', protect, authorizeRoles('admin'), async (req, res) =
         endOfYesterday.setDate(today.getDate() - 1);
         endOfYesterday.setHours(23, 59, 59, 999);
 
-        const totalSalesYesterday = await Order.aggregate([
+        const totalSalesYesterday = await Payment.aggregate([ // <<-- MUDANÇA: AGORA USA Payment
             {
                 $match: {
-                    isPaid: true,
-                    paymentDate: { $gte: yesterday, $lte: endOfYesterday }
+                    paymentDate: { $gte: yesterday, $lte: endOfYesterday } // Filtra por paymentDate
                 }
             },
             {
                 $group: {
                     _id: null,
-                    total: { $sum: '$paidAmount' }
+                    total: { $sum: '$amount' } // Soma o campo 'amount' do Payment
                 }
             }
         ]);
@@ -176,7 +174,7 @@ router.get('/daily-profit', protect, authorizeRoles('admin'), async (req, res) =
         res.json({ profitYesterday: profit });
 
     } catch (error) {
-        console.error('Erro ao buscar lucro do dia anterior:', error.message);
+        console.error('Erro ao buscar lucro do dia anterior (Payment):', error.message);
         console.error(error.stack);
         res.status(500).json({ message: 'Erro ao buscar lucro do dia anterior', error: error.message });
     }
