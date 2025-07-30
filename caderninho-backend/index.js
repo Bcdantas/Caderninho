@@ -1,5 +1,6 @@
-require('dotenv').config(); // Carrega as variáveis de ambiente do arquivo .env
-const express = require('express'); // Importa o Express
+require('dotenv').config();
+console.log('--- Servidor Backend INICIADO! (Versão de Depuração) ---'); // <<-- ADICIONE ESTA LINHA!
+const express = require('express');
 const mongoose = require('mongoose'); // Importa o Mongoose para o MongoDB
 const cors = require('cors'); // Importa o CORS para comunicação entre front e back
 
