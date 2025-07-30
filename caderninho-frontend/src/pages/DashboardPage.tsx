@@ -27,13 +27,20 @@ interface GroupedHighDebt {
     customer: Customer;
     totalAmountOver100: number; // A soma das dívidas desse cliente
 }
+
+// NOVA INTERFACE: Para os fiados de hoje detalhados
+interface TodayUnpaidDebtItem {
+    customerId: string;
+    customerName: string;
+    totalDebtToday: number;
+}
 // ************************************************************
 
 const DashboardPage: React.FC = () => {
   const { username, userRole, userToken, showToast } = useAppContext();
   const [profitYesterday, setProfitYesterday] = useState<number | null>(null); // Manter se a rota still existir
-  const [todayProfit, setTodayProfit] = useState<number | null>(null); // <<-- NOVO ESTADO
-  const [todayUnpaidDebtsCount, setTodayUnpaidDebtsCount] = useState<number | null>(null); // <<-- NOVO ESTADO
+  const [todayProfit, setTodayProfit] = useState<number | null>(null);
+  const [todayUnpaidDebtsList, setTodayUnpaidDebtsList] = useState<TodayUnpaidDebtItem[]>([]); // <<-- MUDANÇA AQUI
   const [groupedHighDebts, setGroupedHighDebts] = useState<GroupedHighDebt[]>([]);
   const [topSellingItems, setTopSellingItems] = useState<TopSellingItem[]>([]);
   const [loadingReports, setLoadingReports] = useState<boolean>(true);
@@ -49,14 +56,14 @@ const DashboardPage: React.FC = () => {
     setLoadingReports(true);
     setErrorReports(null);
     try {
-      const [yesterdayProfitRes, todayProfitRes, todayUnpaidDebtsCountRes, highDebtsRes, topSellingRes] = await Promise.all([ // <<-- MUDANÇA AQUI
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/daily-profit`, { // Lucro do dia anterior (manter se ainda usar)
+      const [yesterdayProfitRes, todayProfitRes, todayUnpaidDebtsRes, highDebtsRes, topSellingRes] = await Promise.all([ // <<-- MUDANÇA AQUI (nome da variável)
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/daily-profit`, {
           headers: { Authorization: `Bearer ${userToken}` }
         }),
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/today-profit`, { // <<-- NOVA REQUISIÇÃO
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/today-profit`, {
           headers: { Authorization: `Bearer ${userToken}` }
         }),
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/today-unpaid-debts-count`, { // <<-- NOVA REQUISIÇÃO
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/today-unpaid-debts`, { // <<-- MUDANÇA AQUI (nova rota)
           headers: { Authorization: `Bearer ${userToken}` }
         }),
         fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/high-debts`, {
@@ -68,21 +75,21 @@ const DashboardPage: React.FC = () => {
       ]);
 
       if (!yesterdayProfitRes.ok) throw new Error('Falha ao buscar lucro do dia anterior.');
-      if (!todayProfitRes.ok) throw new Error('Falha ao buscar lucro de hoje.'); // <<-- VERIFICAÇÃO DE ERRO
-      if (!todayUnpaidDebtsCountRes.ok) throw new Error('Falha ao buscar fiados de hoje.'); // <<-- VERIFICAÇÃO DE ERRO
+      if (!todayProfitRes.ok) throw new Error('Falha ao buscar lucro de hoje.');
+      if (!todayUnpaidDebtsRes.ok) throw new Error('Falha ao buscar fiados de hoje.'); // <<-- VERIFICAÇÃO DE ERRO
       if (!highDebtsRes.ok) throw new Error('Falha ao buscar débitos altos.');
       if (!topSellingRes.ok) throw new Error('Falha ao buscar itens mais vendidos.');
 
       const yesterdayProfitData = await yesterdayProfitRes.json();
-      const todayProfitData = await todayProfitRes.json(); // <<-- NOVO DADO
-      const todayUnpaidDebtsCountData = await todayUnpaidDebtsCountRes.json(); // <<-- NOVO DADO
+      const todayProfitData = await todayProfitRes.json();
+      const todayUnpaidDebtsListData: TodayUnpaidDebtItem[] = await todayUnpaidDebtsRes.json(); // <<-- NOVO DADO
       const highDebtsData: Debt[] = await highDebtsRes.json();
 
       const topSellingData = await topSellingRes.json();
 
       setProfitYesterday(yesterdayProfitData.profitYesterday);
-      setTodayProfit(todayProfitData.todayProfit); // <<-- ATUALIZA ESTADO
-      setTodayUnpaidDebtsCount(todayUnpaidDebtsCountData.todayUnpaidDebtsCount); // <<-- ATUALIZA ESTADO
+      setTodayProfit(todayProfitData.todayProfit);
+      setTodayUnpaidDebtsList(todayUnpaidDebtsListData); // <<-- ATUALIZA ESTADO
       setTopSellingItems(topSellingData);
 
       // --- Lógica para Agrupar Débitos Altos por Cliente ---
@@ -141,10 +148,10 @@ const DashboardPage: React.FC = () => {
           <div className="col-md-4">
             <div className="card text-center h-100">
               <div className="card-body">
-                <h5 className="card-title">Lucro de Hoje</h5> {/* <<-- MUDANÇA NO TÍTULO */}
+                <h5 className="card-title">Lucro de Hoje</h5>
                 <p className="card-text fs-3 text-success">
                   <FontAwesomeIcon icon={faDollarSign} className="me-2" />
-                  {todayProfit !== null ? todayProfit.toFixed(2).replace('.', ',') : '0,00'} {/* <<-- AGORA USA todayProfit */}
+                  {todayProfit !== null ? todayProfit.toFixed(2).replace('.', ',') : '0,00'}
                 </p>
               </div>
             </div>
@@ -173,16 +180,25 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Fiados de Hoje */}
-          <div className="col-md-4"> {/* <<-- NOVO CARD */}
-            <div className="card text-center h-100">
+          {/* Fiados de Hoje (Detalhado) */}
+          <div className="col-md-4">
+            <div className="card h-100">
               <div className="card-body">
                 <h5 className="card-title">Fiados de Hoje</h5>
-                <p className="card-text fs-3 text-warning">
-                  <FontAwesomeIcon icon={faUsersSlash} className="me-2" />
-                  {todayUnpaidDebtsCount !== null ? todayUnpaidDebtsCount : '0'}
-                </p>
-                <p className="text-muted small">Dívidas criadas hoje e ainda não pagas.</p>
+                {todayUnpaidDebtsList.length === 0 ? ( // <<-- MUDANÇA AQUI
+                  <p className="card-text text-muted">Nenhum fiado registrado hoje.</p>
+                ) : (
+                  <ul className="list-group list-group-flush">
+                    {todayUnpaidDebtsList.map(item => ( // <<-- MUDANÇA AQUI
+                      <li key={item.customerId} className="list-group-item d-flex justify-content-between align-items-center">
+                        {item.customerName}
+                        <span className="badge bg-warning text-dark rounded-pill">
+                          R$ {item.totalDebtToday.toFixed(2).replace('.', ',')}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </div>

@@ -1,16 +1,14 @@
 const express = require('express');
 const router = express.Router();
-// Importa o protect e o authorizeRoles do middleware
-// ESTA LINHA É CRUCIAL: protect e authorizeRoles DEVEM ESTAR AQUI
-const { protect, authorizeRoles } = require('../middleware/authMiddleware'); 
-const Order = require('../models/Order'); // Verifique: seu arquivo é 'Order.js'?
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+const Order = require('../models/Order');
 const Debt = require('../models/Debt');
-const Product = require('../models/Product'); // Para top-selling-items
+const Product = require('../models/Product');
 
 // @desc    Obter lucro total de todos os tempos
 // @route   GET /api/reports/total-profit
 // @access  Private (Admin only)
-router.get('/total-profit', protect, authorizeRoles('admin'), async (req, res) => { // <<-- AGORA DEVE FUNCIONAR AQUI
+router.get('/total-profit', protect, authorizeRoles('admin'), async (req, res) => {
     try {
         const result = await Order.aggregate([
             { $match: { isPaid: true } }, // Apenas pedidos pagos
@@ -33,7 +31,7 @@ router.get('/total-profit', protect, authorizeRoles('admin'), async (req, res) =
 // @desc    Obter lucro dos pedidos pagos HOJE
 // @route   GET /api/reports/today-profit
 // @access  Private (Admin only)
-router.get('/today-profit', protect, authorizeRoles('admin'), async (req, res) => { // <<-- E AQUI NA LINHA 33
+router.get('/today-profit', protect, authorizeRoles('admin'), async (req, res) => {
     try {
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0); // Início do dia (00:00:00)
@@ -88,16 +86,73 @@ router.get('/today-unpaid-debts-count', protect, authorizeRoles('admin'), async 
     }
 });
 
+// @desc    Obter lista de dívidas criadas HOJE e NÃO PAGAS, agrupadas por cliente
+// @route   GET /api/reports/today-unpaid-debts
+// @access  Private (Admin only)
+router.get('/today-unpaid-debts', protect, authorizeRoles('admin'), async (req, res) => {
+    try {
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0); // Início do dia (00:00:00)
+
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999); // Fim do dia (23:59:59)
+
+        const result = await Debt.aggregate([
+            {
+                $match: {
+                    isPaid: false, // Apenas dívidas pendentes
+                    createdAt: { $gte: startOfToday, $lte: endOfToday } // Dívidas criadas hoje
+                }
+            },
+            {
+                $lookup: { // "Join" com a coleção de clientes para pegar o nome
+                    from: 'customers', // Nome da coleção no DB (minúsculas, plural)
+                    localField: 'customer',
+                    foreignField: '_id',
+                    as: 'customerDetails'
+                }
+            },
+            {
+                $unwind: '$customerDetails' // Desmembra o array de detalhes do cliente (será 1)
+            },
+            {
+                $group: {
+                    _id: '$customerDetails._id', // Agrupa por ID do cliente
+                    customerName: { $first: '$customerDetails.name' }, // Pega o nome do cliente
+                    totalDebtToday: { $sum: '$amount' }, // Soma o valor das dívidas de hoje para o cliente
+                }
+            },
+            {
+                $project: { // Seleciona apenas os campos desejados
+                    _id: 0, // Exclui o _id do grupo
+                    customerId: '$_id',
+                    customerName: 1,
+                    totalDebtToday: 1
+                }
+            },
+            {
+                $sort: { totalDebtToday: -1 } // Opcional: Ordena por maior dívida
+            }
+        ]);
+
+        res.json(result);
+    } catch (error) {
+        console.error('Erro ao buscar fiados de hoje detalhados:', error.message);
+        console.error(error.stack);
+        res.status(500).json({ message: 'Erro ao buscar fiados de hoje detalhados', error: error.message });
+    }
+});
+
 // @desc    Obter o lucro (total de vendas pagas) do dia anterior
 // @route   GET /api/reports/daily-profit
 // @access  Private (Admin)
-router.get('/daily-profit', protect, authorizeRoles('admin'), async (req, res) => { // Mantido essa rota se precisar do lucro de ONTEM
+router.get('/daily-profit', protect, authorizeRoles('admin'), async (req, res) => {
     try {
         const today = new Date();
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
         yesterday.setHours(0, 0, 0, 0);
-
+        
         const endOfYesterday = new Date(today);
         endOfYesterday.setDate(today.getDate() - 1);
         endOfYesterday.setHours(23, 59, 59, 999);
@@ -106,13 +161,13 @@ router.get('/daily-profit', protect, authorizeRoles('admin'), async (req, res) =
             {
                 $match: {
                     isPaid: true,
-                    paymentDate: { $gte: yesterday, $lte: endOfYesterday } // Ajustado para paymentDate
+                    paymentDate: { $gte: yesterday, $lte: endOfYesterday }
                 }
             },
             {
                 $group: {
                     _id: null,
-                    total: { $sum: '$paidAmount' } // Ajustado para paidAmount
+                    total: { $sum: '$paidAmount' }
                 }
             }
         ]);
