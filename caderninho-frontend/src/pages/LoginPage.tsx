@@ -1,40 +1,30 @@
+// CAMINHO: src/pages/LoginPage.tsx
+
 import React, { useState } from 'react';
 import LoginForm from '../components/LoginForm';
-import { useAppContext } from '../context/AppContext'; // Importa o hook do contexto
+import { useAppContext } from '../context/AppContext';
+import './LoginPage.css'; // <<< PASSO 1: Importar o novo arquivo de CSS
 
 const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Usar o hook do contexto para acessar a função de login
   const { login } = useAppContext();
 
   const handleLogin = async (username: string, password: string) => {
     setLoading(true);
     setError(null);
-
     try {
-      // 1. Fazer a requisição POST para o backend
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
-        });
-
-      // 2. Verificar a resposta
-      if (!response.ok) { // Se a resposta não for 2xx (ex: 401, 400, 500)
+      });
+      if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Erro ao tentar logar.');
       }
-
-      // 3. Processar a resposta de sucesso
-      const data = await response.json(); // Pega os dados da resposta (token, _id, username, role)
-
-      // 4. Chamar a função login do contexto para guardar os dados e redirecionar
-      login(data.token, data.role, data.username); // O contexto cuida do redirecionamento
-
+      const data = await response.json();
+      login(data.token, data.role, data.username);
     } catch (err: any) {
       setError(err.message || 'Erro desconhecido ao tentar logar.');
       console.error('Erro de login:', err);
@@ -44,7 +34,8 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+    // <<< PASSO 2: Usar a nova classe de container para centralizar o formulário >>>
+    <div className="login-page-container">
       <LoginForm onSubmit={handleLogin} loading={loading} error={error} />
     </div>
   );

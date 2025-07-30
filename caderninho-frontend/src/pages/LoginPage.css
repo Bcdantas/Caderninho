@@ -1,0 +1,31 @@
+/* CAMINHO: src/pages/LoginPage.css */
+
+.login-page-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh; /* Garante que o container ocupe a tela inteira */
+  padding: 1rem;
+}
+
+.login-form-card {
+  padding: 2.5rem;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  
+  /* Efeito de "vidro fosco" */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); /* Para compatibilidade com Safari */
+  
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.login-form-card .form-control-lg {
+  padding: 0.75rem 1.25rem; /* Deixa os campos de input maiores */
+}
+
+.login-form-card .btn-lg {
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+}

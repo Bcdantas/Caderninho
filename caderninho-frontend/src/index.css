@@ -1,1 +1,11 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
+/* CAMINHO: src/index.css */
+
+/* Importa uma fonte mais moderna do Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
+/* Estilos globais para o corpo da página */
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(to right top, #6dd5ed, #2193b0); /* Gradiente de azul suave */
+  min-height: 100vh;
+}

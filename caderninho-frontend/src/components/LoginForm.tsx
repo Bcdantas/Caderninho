@@ -1,4 +1,9 @@
+// CAMINHO: src/components/LoginForm.tsx
+
 import React, { useState } from 'react';
+// <<< PASSO 1: Importar ícones >>>
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUser, faLock } from '@fortawesome/free-solid-svg-icons';
 
 interface LoginFormProps {
   onSubmit: (username: string, password: string) => void;
@@ -11,29 +16,28 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, loading, error }) => {
   const [password, setPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault(); // Evita o recarregamento da página
+    e.preventDefault();
     onSubmit(username, password);
   };
 
   return (
-    // Classes Bootstrap para estilizar o formulário
-    <form onSubmit={handleSubmit} className="card p-4 shadow-sm" style={{ maxWidth: '400px', width: '100%' }}>
-      <h2 className="card-title text-center mb-4">Login</h2>
+    // <<< PASSO 2: Aplicar novo estilo ao card do formulário >>>
+    <form onSubmit={handleSubmit} className="login-form-card" style={{ maxWidth: '400px', width: '100%' }}>
+      <h2 className="text-center mb-1">Bem-vindo ao</h2>
+      <h1 className="text-center text-primary mb-4">Caderninho</h1>
 
-      {error && (
-        <div className="alert alert-danger" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <div className="alert alert-danger">{error}</div>}
 
-      <div className="mb-3">
-        <label htmlFor="username" className="form-label">
-          Usuário:
-        </label>
+      {/* <<< PASSO 3: Usar 'input-group' do Bootstrap para adicionar ícones >>> */}
+      <div className="input-group mb-3">
+        <span className="input-group-text">
+          <FontAwesomeIcon icon={faUser} />
+        </span>
         <input
           type="text"
           id="username"
-          className="form-control" // Classe Bootstrap para campos de formulário
+          className="form-control form-control-lg"
+          placeholder="Usuário"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
@@ -41,14 +45,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, loading, error }) => {
         />
       </div>
 
-      <div className="mb-3">
-        <label htmlFor="password" className="form-label">
-          Senha:
-        </label>
+      <div className="input-group mb-4">
+        <span className="input-group-text">
+          <FontAwesomeIcon icon={faLock} />
+        </span>
         <input
           type="password"
           id="password"
-          className="form-control" // Classe Bootstrap para campos de formulário
+          className="form-control form-control-lg"
+          placeholder="Senha"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -56,12 +61,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, loading, error }) => {
         />
       </div>
 
-      <div className="d-grid gap-2"> {/* d-grid gap-2 para o botão ocupar a largura total */}
-        <button
-          type="submit"
-          className="btn btn-primary" // Classe Bootstrap para botão primário
-          disabled={loading}
-        >
+      <div className="d-grid gap-2">
+        <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
           {loading ? 'Entrando...' : 'Entrar'}
         </button>
       </div>
