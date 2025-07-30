@@ -13,7 +13,7 @@ import ProtectedRoute from './components/ProtectedRoute.tsx';
 import { AppProvider, useAppContext } from './context/AppContext.tsx'; // Usando AppProvider
 
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // JS do Bootstrap
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './index.css';
 
 // Componente que engloba todas as rotas e usa o contexto
