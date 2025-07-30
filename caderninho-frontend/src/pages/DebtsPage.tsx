@@ -1,4 +1,4 @@
-// CAMINHO: caderninho-frontend/src/pages/DebtsPage.tsx
+// CAMINHO: src/pages/DebtsPage.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
@@ -30,7 +30,7 @@ const DebtsPage: React.FC = () => {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao buscar dívidas.');
+        throw new Error(errorData.message || 'Falha ao buscar fiados.');
       }
       const data: Debt[] = await response.json();
 
@@ -63,7 +63,7 @@ const DebtsPage: React.FC = () => {
   }, [fetchDebts]);
 
   const handleMarkAsPaid = async (debtId: string) => {
-    if (!window.confirm('Tem certeza que deseja marcar esta dívida como paga?')) {
+    if (!window.confirm('Tem certeza que deseja marcar este fiado como pago?')) {
       return;
     }
     if (!userToken) {
@@ -75,16 +75,16 @@ const DebtsPage: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/debts/${debtId}/pay`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentMethod: 'Dinheiro' }) // Enviando um método de pagamento padrão
+        body: JSON.stringify({ paymentMethod: 'Dinheiro' })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao marcar dívida como paga.');
+        throw new Error(errorData.message || 'Falha ao marcar fiado como pago.');
       }
 
-      showToast('Dívida paga com sucesso!', 'success');
-      fetchDebts(); // Recarrega a lista de dívidas para remover a que foi paga
+      showToast('Fiado pago com sucesso!', 'success');
+      fetchDebts();
     } catch (err: any) {
       setError(err.message);
       showToast(err.message, 'danger');
@@ -95,15 +95,18 @@ const DebtsPage: React.FC = () => {
     setExpandedCustomerId(prevId => (prevId === customerId ? null : customerId));
   };
 
-  if (loading) return <div className="text-center mt-5"><h4>Carregando dívidas...</h4></div>;
+  if (loading) return <div className="text-center mt-5"><h4>Carregando fiados...</h4></div>;
   
   return (
     <div className="container mt-4">
-      <h2 className="mb-4">Contas Pendentes</h2>
+      {/* ======================================================= */}
+      {/* ## ALTERAÇÃO APLICADA AQUI ## */}
+      <h2 className="mb-4">Fiados Pendentes</h2>
+      {/* ======================================================= */}
       {error && <div className="alert alert-danger">{error}</div>}
 
       {groupedDebts.length === 0 ? (
-        <div className="alert alert-info">Não há dívidas pendentes no momento.</div>
+        <div className="alert alert-info">Não há fiados pendentes no momento.</div>
       ) : (
         <div className="accordion" id="debtsAccordion">
           {groupedDebts.map(groupedDebt => (
@@ -123,7 +126,7 @@ const DebtsPage: React.FC = () => {
                 className={`accordion-collapse collapse ${expandedCustomerId === groupedDebt.customer._id ? 'show' : ''}`}
               >
                 <div className="accordion-body">
-                  <h6>Pedidos em Dívida:</h6>
+                  <h6>Pedidos do Fiado:</h6>
                   <ul className="list-group">
                     {groupedDebt.individualDebts.map(debt => (
                       <li key={debt._id} className="list-group-item d-flex justify-content-between align-items-center">
@@ -135,7 +138,7 @@ const DebtsPage: React.FC = () => {
                         <button
                           className="btn btn-success btn-sm"
                           onClick={() => handleMarkAsPaid(debt._id)}
-                          title="Marcar este pedido como Pago"
+                          title="Marcar este fiado como Pago"
                         >
                           Pagar Este
                         </button>

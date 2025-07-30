@@ -26,11 +26,8 @@ interface ToastMessage {
 function App() {
   const { logout, username, userRole, userToken } = useAppContext();
   const [toasts, setToasts] = React.useState<ToastMessage[]>([]);
-
-  // Estado para controlar se o menu está recolhido
   const [isNavCollapsed, setIsNavCollapsed] = useState(true);
 
-  // Função para inverter o estado do menu
   const handleNavCollapse = () => setIsNavCollapsed(!isNavCollapsed);
 
   const removeToast = (id: string) => {
@@ -43,7 +40,6 @@ function App() {
         <div className="container-fluid">
           <Link className="navbar-brand" to="/dashboard">Caderninho</Link>
           
-          {/* Botão do menu modificado para usar o onClick do React */}
           <button 
             className="navbar-toggler" 
             type="button" 
@@ -55,12 +51,10 @@ function App() {
             <span className="navbar-toggler-icon"></span>
           </button>
 
-          {/* Container do menu com classe 'show' controlada pelo React */}
           <div className={`${isNavCollapsed ? 'collapse' : ''} navbar-collapse`} id="navbarNav">
             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
               {userToken && (
                 <>
-                  {/* onClick adicionado para fechar o menu ao navegar */}
                   <li className="nav-item">
                     <Link className="nav-link" to="/dashboard" onClick={() => setIsNavCollapsed(true)}>
                       <FontAwesomeIcon icon={faChartLine} className="me-2" />
@@ -85,12 +79,15 @@ function App() {
                       Pedidos
                     </Link>
                   </li>
+                  {/* ======================================================= */}
+                  {/* ## ALTERAÇÃO APLICADA AQUI ## */}
                   <li className="nav-item">
                     <Link className="nav-link" to="/debts" onClick={() => setIsNavCollapsed(true)}>
                       <FontAwesomeIcon icon={faFileInvoiceDollar} className="me-2" />
-                      Dívidas
+                      Fiados
                     </Link> 
                   </li>
+                  {/* ======================================================= */}
                   {userRole === 'admin' && (
                     <li className="nav-item">
                       <Link className="nav-link" to="/profit" onClick={() => setIsNavCollapsed(true)}>
