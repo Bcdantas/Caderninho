@@ -209,9 +209,9 @@ const DebtsPage: React.FC = () => {
                                 <br />
                                 <small className="text-muted">Data: {new Date(debt.debtDate).toLocaleDateString()}</small>
                                 <ul className="list-unstyled ms-3 mt-1 small">
-                                  {debt.order && debt.order.items.map(item => (
-                                    <li key={item.product?._id || item.product}>
-                                      {item.product ? item.product.name : 'Produto Desconhecido'} (x{item.quantity})
+                                  {debt.order && debt.order.items.map((item, idx) => (
+                                    <li key={item.product && typeof item.product !== 'string' && item.product._id ? item.product._id : `item-${idx}`}>
+                                      {item.product && typeof item.product !== 'string' ? item.product.name : 'Produto Desconhecido'} (x{item.quantity})
                                     </li>
                                   ))}
                                 </ul>

@@ -4,6 +4,14 @@ import ProductForm from '../components/ProductForm'; // Formulário para adicion
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'; // Componente de ícone
 import { faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons'; // Ícones específicos
 
+// Definição da interface Product
+export interface Product {
+  _id: string;
+  name: string;
+  price: number;
+  description?: string;
+}
+
 const ProductsPage: React.FC = () => {
   const { userToken } = useAppContext();
   const [products, setProducts] = useState<Product[]>([]);
