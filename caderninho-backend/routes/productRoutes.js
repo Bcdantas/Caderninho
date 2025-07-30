@@ -1,103 +1,85 @@
+// CAMINHO: caderninho-backend/routes/productRoutes.js
+
 const express = require('express');
 const router = express.Router();
-const Product = require('../models/Product'); // Importa o modelo de Produto
+const Product = require('../models/Product');
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
-// Middleware de proteção de rota (autenticação) - AINDA NÃO TEMOS, MAS VAMOS ADICIONAR
-// const { protect } = require('../middleware/authMiddleware');
-
-// @desc    Obter todos os produtos
-// @route   GET /api/products
-// @access  Public (por enquanto, depois pode ser Protected)
-router.get('/', async (req, res) => {
+// Rota GET (sem alteração)
+router.get('/', protect, authorizeRoles('admin', 'employee'), async (req, res) => {
     try {
-        const products = await Product.find({}); // Encontra todos os produtos no DB
-        res.json(products); // Retorna os produtos como JSON
+        const products = await Product.find({});
+        res.json(products);
     } catch (error) {
-        res.status(500).json({ message: 'Erro ao buscar produtos', error: error.message });
-    }
-});
-
-// @desc    Obter um produto por ID
-// @route   GET /api/products/:id
-// @access  Public (por enquanto)
-router.get('/:id', async (req, res) => {
-    try {
-        const product = await Product.findById(req.params.id); // Busca um produto pelo ID
-        if (product) {
-            res.json(product);
-        } else {
-            res.status(404).json({ message: 'Produto não encontrado' });
-        }
-    } catch (error) {
-        res.status(500).json({ message: 'Erro ao buscar produto', error: error.message });
+        res.status(500).json({ message: 'Erro ao buscar produtos' });
     }
 });
 
 // @desc    Criar um novo produto
 // @route   POST /api/products
-// @access  Private (futuramente, só admin pode criar)
-router.post('/', async (req, res) => { // Removido o 'protect' temporariamente
-    const { name, price, description } = req.body;
+router.post('/', protect, authorizeRoles('admin'), async (req, res) => {
+    // Adiciona quantityInStock aos dados recebidos
+    const { name, price, description, quantityInStock } = req.body;
 
-    if (!name || !price) {
+    if (!name || price === undefined) {
         return res.status(400).json({ message: 'Nome e preço são obrigatórios' });
     }
 
     try {
-        const product = new Product({ name, price, description });
-        const createdProduct = await product.save(); // Salva o novo produto no DB
-        res.status(201).json(createdProduct); // Retorna o produto criado
+        const product = new Product({
+            name,
+            price,
+            description,
+            quantityInStock: quantityInStock || 0 // Usa o valor enviado ou 0 como padrão
+        });
+        const createdProduct = await product.save();
+        res.status(201).json(createdProduct);
     } catch (error) {
-        // Se o nome do produto já existe (devido ao 'unique: true' no schema)
         if (error.code === 11000) {
             return res.status(400).json({ message: 'Já existe um produto com este nome.' });
         }
-        res.status(500).json({ message: 'Erro ao criar produto', error: error.message });
+        res.status(500).json({ message: 'Erro ao criar produto' });
     }
 });
 
 // @desc    Atualizar um produto
 // @route   PUT /api/products/:id
-// @access  Private (futuramente)
-router.put('/:id', async (req, res) => { // Removido o 'protect' temporariamente
-    const { name, price, description } = req.body;
+router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
+    const { name, price, description, quantityInStock } = req.body;
 
     try {
         const product = await Product.findById(req.params.id);
-
         if (product) {
-            product.name = name || product.name; // Atualiza o nome se for fornecido
-            product.price = price || product.price; // Atualiza o preço se for fornecido
-            product.description = description !== undefined ? description : product.description; // Atualiza a descrição
+            product.name = name || product.name;
+            product.price = price !== undefined ? price : product.price;
+            product.description = description !== undefined ? description : product.description;
+            // Permite atualizar a quantidade em estoque
+            product.quantityInStock = quantityInStock !== undefined ? quantityInStock : product.quantityInStock;
 
-            const updatedProduct = await product.save(); // Salva as alterações
+            const updatedProduct = await product.save();
             res.json(updatedProduct);
         } else {
             res.status(404).json({ message: 'Produto não encontrado' });
         }
     } catch (error) {
-        // Se o novo nome do produto já existe
         if (error.code === 11000) {
             return res.status(400).json({ message: 'Já existe outro produto com este nome.' });
         }
-        res.status(500).json({ message: 'Erro ao atualizar produto', error: error.message });
+        res.status(500).json({ message: 'Erro ao atualizar produto' });
     }
 });
 
-// @desc    Deletar um produto
-// @route   DELETE /api/products/:id
-// @access  Private (futuramente)
-router.delete('/:id', async (req, res) => { // Removido o 'protect' temporariamente
+// Rota DELETE (sem alteração)
+router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
     try {
-        const product = await Product.findByIdAndDelete(req.params.id); // Encontra e deleta pelo ID
-
+        const product = await Product.findByIdAndDelete(req.params.id);
         if (product) {
             res.json({ message: 'Produto removido com sucesso' });
         } else {
             res.status(404).json({ message: 'Produto não encontrado' });
         }
     } catch (error) {
-        res.status(500).json({ message: 'Erro ao deletar produto', error: error.message });
+        res.status(500).json({ message: 'Erro ao deletar produto' });
     }
 });
 

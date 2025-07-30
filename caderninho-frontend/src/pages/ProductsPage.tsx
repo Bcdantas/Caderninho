@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { useAppContext } from '../context/AppContext'; // Para pegar o token de autenticação
-import ProductForm from '../components/ProductForm'; // Formulário para adicionar/editar produtos
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'; // Componente de ícone
-import { faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons'; // Ícones específicos
+// CAMINHO: src/pages/ProductsPage.tsx
 
-// Definição da interface Product
+import React, { useState, useEffect } from 'react';
+import { useAppContext } from '../context/AppContext';
+import ProductForm from '../components/ProductForm';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
+
+// <<< PASSO 1: ATUALIZAR A INTERFACE PARA INCLUIR O ESTOQUE >>>
 export interface Product {
   _id: string;
   name: string;
   price: number;
   description?: string;
+  quantityInStock: number; // Campo de estoque adicionado
 }
 
 const ProductsPage: React.FC = () => {
@@ -17,27 +20,26 @@ const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState<boolean>(false); // Estado para controlar a visibilidade do formulário
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null); // Produto sendo editado
+  const [showForm, setShowForm] = useState<boolean>(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     fetchProducts();
-  }, [userToken]); // Refaz a busca se o token mudar (ex: login/logout)
+  }, [userToken]);
 
   const fetchProducts = async () => {
-    if (!userToken) return; // Não busca se não houver token
+    if (!userToken) return;
     setLoading(true);
     setError(null);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products`, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userToken}`, // Envia o token de autenticação
+          'Authorization': `Bearer ${userToken}`,
         },
       });
 
       if (!response.ok) {
-        // Tenta ler a mensagem de erro do backend
         const errorData = await response.json();
         throw new Error(errorData.message || 'Falha ao buscar produtos.');
       }
@@ -45,19 +47,18 @@ const ProductsPage: React.FC = () => {
       setProducts(data);
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar produtos.');
-      console.error('Erro ao carregar produtos:', err);
     } finally {
       setLoading(false);
     }
   };
 
   const handleAddProduct = () => {
-    setEditingProduct(null); // Garante que estamos adicionando, não editando
+    setEditingProduct(null);
     setShowForm(true);
   };
 
   const handleEditProduct = (product: Product) => {
-    setEditingProduct(product); // Define o produto para edição
+    setEditingProduct(product);
     setShowForm(true);
   };
 
@@ -69,36 +70,30 @@ const ProductsPage: React.FC = () => {
       setError('Você precisa estar logado para deletar produtos.');
       return;
     }
-
-    setLoading(true);
-    setError(null);
+    // O restante da função permanece igual
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${userToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao deletar produto.');
-      }
-      // Remove o produto da lista sem precisar recarregar tudo
-      setProducts(products.filter(p => p._id !== id));
-      alert('Produto deletado com sucesso!');
+        setLoading(true);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${userToken}` },
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao deletar produto.');
+        }
+        setProducts(products.filter(p => p._id !== id));
+        alert('Produto deletado com sucesso!');
     } catch (err: any) {
-      setError(err.message || 'Erro ao deletar produto.');
-      console.error('Erro ao deletar produto:', err);
+        setError(err.message || 'Erro ao deletar produto.');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
   const handleFormSubmit = () => {
-    setShowForm(false); // Fecha o formulário após adicionar/editar
-    setEditingProduct(null); // Limpa o produto em edição
-    fetchProducts(); // Recarrega a lista para mostrar as mudanças
+    setShowForm(false);
+    setEditingProduct(null);
+    fetchProducts();
   };
 
   if (loading) return <div className="text-center mt-5">Carregando produtos...</div>;
@@ -129,6 +124,8 @@ const ProductsPage: React.FC = () => {
                   <tr>
                     <th>Nome</th>
                     <th>Preço</th>
+                    {/* <<< PASSO 2: ADICIONAR O CABEÇALHO DA COLUNA DE ESTOQUE >>> */}
+                    <th>Estoque</th>
                     <th>Descrição</th>
                     <th>Ações</th>
                   </tr>
@@ -138,19 +135,27 @@ const ProductsPage: React.FC = () => {
                     <tr key={product._id}>
                       <td>{product.name}</td>
                       <td>R$ {product.price.toFixed(2).replace('.', ',')}</td>
+                      
+                      {/* <<< PASSO 3: ADICIONAR A CÉLULA DE DADOS DO ESTOQUE >>> */}
+                      {/* Adicionamos uma classe condicional para destacar estoque baixo/negativo */}
+                      <td className={ (product.quantityInStock || 0) <= 0 ? 'text-danger fw-bold' : '' }>
+                        {/* Usamos '|| 0' para mostrar 0 em produtos antigos que ainda não têm o campo */}
+                        {product.quantityInStock || 0}
+                      </td>
+
                       <td>{product.description || 'N/A'}</td>
                       <td>
                         <button
                             className="btn btn-warning btn-sm me-2"
                             onClick={() => handleEditProduct(product)}
-                            title="Editar" // Adicionado title para acessibilidade
+                            title="Editar"
                         >
                             <FontAwesomeIcon icon={faEdit} />
                         </button>
                         <button
                             className="btn btn-danger btn-sm"
                             onClick={() => handleDeleteProduct(product._id)}
-                            title="Deletar" // Adicionado title para acessibilidade
+                            title="Deletar"
                         >
                             <FontAwesomeIcon icon={faTrash} />
                         </button>
