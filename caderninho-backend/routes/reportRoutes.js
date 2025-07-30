@@ -1,146 +1,87 @@
 const express = require('express');
 const router = express.Router();
-const Order = require('../models/Order'); // Para buscar pedidos
-const Debt = require('../models/Debt');   // Para buscar dívidas
-const Product = require('../models/Product'); // Para buscar detalhes do produto
+const { protect, authorize } = require('../middleware/authMiddleware');
+const Order = require('../models/Order');
+const Debt = require('../models/Debt');
 
-// Middleware de proteção de rota (autenticação) - Vamos usar aqui
-const { protect, authorizeRoles } = require('../middleware/authMiddleware');
-
-// @desc    Obter o lucro (total de vendas pagas) do dia anterior
-// @route   GET /api/reports/daily-profit
-// @access  Private (Admin)
-router.get('/daily-profit', protect, async (req, res) => {
+// @desc    Obter lucro total de todos os tempos
+// @route   GET /api/reports/total-profit
+// @access  Private (Admin only)
+router.get('/total-profit', protect, authorize(['admin']), async (req, res) => {
     try {
-        // Lógica para calcular o lucro do dia anterior
-        // Consideraremos "lucro" como o total de pedidos pagos no dia anterior para simplificar.
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1); // Define para o dia anterior
-        yesterday.setHours(0, 0, 0, 0); // Início do dia anterior
+        const result = await Order.aggregate([
+            { $match: { isPaid: true } }, // Apenas pedidos pagos
+            {
+                $group: {
+                    _id: null,
+                    totalProfit: { $sum: '$paidAmount' } // Soma o valor pago
+                }
+            }
+        ]);
 
-        const endOfYesterday = new Date(today);
-        endOfYesterday.setDate(today.getDate() - 1);
-        endOfYesterday.setHours(23, 59, 59, 999); // Fim do dia anterior
+        res.json({ totalProfit: result.length > 0 ? result[0].totalProfit : 0 });
+    } catch (error) {
+        console.error('Erro ao calcular lucro total:', error.message);
+        console.error(error.stack);
+        res.status(500).json({ message: 'Erro ao calcular lucro total', error: error.message });
+    }
+});
 
-        const totalSalesYesterday = await Order.aggregate([
+// @desc    Obter lucro dos pedidos pagos HOJE
+// @route   GET /api/reports/today-profit
+// @access  Private (Admin only)
+router.get('/today-profit', protect, authorize(['admin']), async (req, res) => {
+    try {
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0); // Início do dia (00:00:00)
+
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999); // Fim do dia (23:59:59)
+
+        const result = await Order.aggregate([
             {
                 $match: {
-                    isPaid: true, // Apenas pedidos pagos
-                    createdAt: { $gte: yesterday, $lte: endOfYesterday } // Dentro do período
+                    isPaid: true,
+                    paymentDate: { $gte: startOfToday, $lte: endOfToday } // Pedidos pagos hoje
                 }
             },
             {
                 $group: {
                     _id: null,
-                    total: { $sum: '$totalAmount' } // Soma o totalAmount de cada pedido
+                    todayProfit: { $sum: '$paidAmount' } // Soma o valor pago
                 }
             }
         ]);
 
-        const profit = totalSalesYesterday.length > 0 ? totalSalesYesterday[0].total : 0;
-        res.json({ profitYesterday: profit });
-
+        res.json({ todayProfit: result.length > 0 ? result[0].todayProfit : 0 });
     } catch (error) {
-        console.error('Erro ao buscar lucro do dia anterior:', error);
-        res.status(500).json({ message: 'Erro ao buscar lucro do dia anterior', error: error.message });
+        console.error('Erro ao calcular lucro de hoje:', error.message);
+        console.error(error.stack);
+        res.status(500).json({ message: 'Erro ao calcular lucro de hoje', error: error.message });
     }
 });
 
-// @desc    Obter débitos maiores que R$ 100 com nome do cliente
-// @route   GET /api/reports/high-debts
-// @access  Private (Admin)
-router.get('/high-debts', protect, async (req, res) => {
+// @desc    Obter o número de dívidas criadas HOJE e que estão NÃO PAGAS
+// @route   GET /api/reports/today-unpaid-debts-count
+// @access  Private (Admin only)
+router.get('/today-unpaid-debts-count', protect, authorize(['admin']), async (req, res) => {
     try {
-        const highDebts = await Debt.find({
-            isPaid: false, // Apenas dívidas pendentes
-            // REMOVIDO: amount: { $gt: 100 }
-        })
-        .populate('customer', 'name'); // Popula apenas o nome do cliente
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0); // Início do dia (00:00:00)
 
-        res.json(highDebts);
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999); // Fim do dia (23:59:59)
 
+        const count = await Debt.countDocuments({
+            isPaid: false,
+            createdAt: { $gte: startOfToday, $lte: endOfToday } // Dívidas criadas hoje
+        });
+
+        res.json({ todayUnpaidDebtsCount: count });
     } catch (error) {
-        console.error('Erro ao buscar débitos altos:', error);
-        res.status(500).json({ message: 'Erro ao buscar débitos altos', error: error.message });
-    }
-});
-
-router.get('/total-profit', protect, authorizeRoles('admin'), async (req, res) =>  {
-    try {
-        const totalProfitResult = await Order.aggregate([
-            {
-                $match: {
-                    isPaid: true, // Apenas pedidos que foram pagos
-                },
-            },
-            {
-                $group: {
-                    _id: null, // Agrupa todos os documentos em um único grupo
-                    totalProfit: { $sum: '$paidAmount' }, // Soma o campo paidAmount
-                },
-            },
-        ]);
-
-        // Se não houver pedidos pagos, o resultado será um array vazio.
-        const totalProfit = totalProfitResult.length > 0 ? totalProfitResult[0].totalProfit : 0;
-
-        res.json({ totalProfit });
-
-    } catch (error) {
-        console.error('Erro ao buscar lucro total:', error.message);
-        console.error(error.stack); // Para depuração detalhada
-        res.status(500).json({ message: 'Erro ao buscar lucro total', error: error.message });
-    }
-});
-
-// @desc    Obter os 3 itens mais vendidos
-// @route   GET /api/reports/top-selling-items
-// @access  Private (Admin)
-router.get('/top-selling-items', protect, async (req, res) => {
-    try {
-        const topSellingItems = await Order.aggregate([
-            {
-                $unwind: '$items' // Desmembra o array 'items' para ter um documento por item de pedido
-            },
-            {
-                $group: {
-                    _id: '$items.product', // Agrupa por ID do produto
-                    totalSold: { $sum: '$items.quantity' } // Soma a quantidade vendida de cada produto
-                }
-            },
-            {
-                $sort: { totalSold: -1 } // Ordena do maior para o menor
-            },
-            {
-                $limit: 3 // Limita aos 3 primeiros
-            },
-            {
-                $lookup: { // "Join" com a coleção de produtos para pegar o nome
-                    from: 'products', // Nome da coleção no DB (minúsculas, plural)
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'productDetails'
-                }
-            },
-            {
-                $unwind: '$productDetails' // Desmembra o array de detalhes do produto (será 1)
-            },
-            {
-                $project: { // Seleciona apenas os campos desejados
-                    _id: 0, // Exclui o _id do grupo
-                    productId: '$_id',
-                    name: '$productDetails.name',
-                    totalSold: 1
-                }
-            }
-        ]);
-
-        res.json(topSellingItems);
-
-    } catch (error) {
-        console.error('Erro ao buscar itens mais vendidos:', error);
-        res.status(500).json({ message: 'Erro ao buscar itens mais vendidos', error: error.message });
+        console.error('Erro ao contar fiados de hoje:', error.message);
+        console.error(error.stack);
+        res.status(500).json({ message: 'Erro ao contar fiados de hoje', error: error.message });
     }
 });
 
