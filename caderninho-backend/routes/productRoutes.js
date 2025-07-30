@@ -5,10 +5,23 @@ const router = express.Router();
 const Product = require('../models/Product');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
-// Rota GET (sem alteração)
+// @desc    Obter produtos com filtros e busca
+// @route   GET /api/products
 router.get('/', protect, authorizeRoles('admin', 'employee'), async (req, res) => {
     try {
-        const products = await Product.find({});
+        let query = {};
+
+        // Filtro por Palavra-Chave (busca no nome e na descrição)
+        if (req.query.keyword) {
+            const keyword = req.query.keyword;
+            query.$or = [
+                { name: { $regex: keyword, $options: 'i' } },
+                { description: { $regex: keyword, $options: 'i' } }
+            ];
+        }
+
+        const products = await Product.find(query);
+
         res.json(products);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar produtos' });
@@ -18,19 +31,16 @@ router.get('/', protect, authorizeRoles('admin', 'employee'), async (req, res) =
 // @desc    Criar um novo produto
 // @route   POST /api/products
 router.post('/', protect, authorizeRoles('admin'), async (req, res) => {
-    // Adiciona quantityInStock aos dados recebidos
     const { name, price, description, quantityInStock } = req.body;
-
     if (!name || price === undefined) {
         return res.status(400).json({ message: 'Nome e preço são obrigatórios' });
     }
-
     try {
         const product = new Product({
             name,
             price,
             description,
-            quantityInStock: quantityInStock || 0 // Usa o valor enviado ou 0 como padrão
+            quantityInStock: quantityInStock || 0
         });
         const createdProduct = await product.save();
         res.status(201).json(createdProduct);
@@ -46,16 +56,13 @@ router.post('/', protect, authorizeRoles('admin'), async (req, res) => {
 // @route   PUT /api/products/:id
 router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
     const { name, price, description, quantityInStock } = req.body;
-
     try {
         const product = await Product.findById(req.params.id);
         if (product) {
             product.name = name || product.name;
             product.price = price !== undefined ? price : product.price;
             product.description = description !== undefined ? description : product.description;
-            // Permite atualizar a quantidade em estoque
             product.quantityInStock = quantityInStock !== undefined ? quantityInStock : product.quantityInStock;
-
             const updatedProduct = await product.save();
             res.json(updatedProduct);
         } else {
@@ -69,7 +76,8 @@ router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
     }
 });
 
-// Rota DELETE (sem alteração)
+// @desc    Deletar um produto
+// @route   DELETE /api/products/:id
 router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
     try {
         const product = await Product.findByIdAndDelete(req.params.id);

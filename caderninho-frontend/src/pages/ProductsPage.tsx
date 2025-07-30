@@ -1,18 +1,17 @@
 // CAMINHO: src/pages/ProductsPage.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import ProductForm from '../components/ProductForm';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faSearch } from '@fortawesome/free-solid-svg-icons';
 
-// <<< PASSO 1: ATUALIZAR A INTERFACE PARA INCLUIR O ESTOQUE >>>
 export interface Product {
   _id: string;
   name: string;
   price: number;
   description?: string;
-  quantityInStock: number; // Campo de estoque adicionado
+  quantityInStock: number;
 }
 
 const ProductsPage: React.FC = () => {
@@ -22,17 +21,15 @@ const ProductsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetchProducts();
-  }, [userToken]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     if (!userToken) return;
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products`, {
+      const url = `${import.meta.env.VITE_API_BASE_URL}/api/products?keyword=${encodeURIComponent(searchTerm)}`;
+      const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userToken}`,
@@ -50,6 +47,18 @@ const ProductsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, [userToken, searchTerm]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchProducts();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [fetchProducts]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
   const handleAddProduct = () => {
@@ -70,7 +79,7 @@ const ProductsPage: React.FC = () => {
       setError('Você precisa estar logado para deletar produtos.');
       return;
     }
-    // O restante da função permanece igual
+
     try {
         setLoading(true);
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products/${id}`, {
@@ -93,10 +102,11 @@ const ProductsPage: React.FC = () => {
   const handleFormSubmit = () => {
     setShowForm(false);
     setEditingProduct(null);
+    // Não precisa chamar fetchProducts() aqui, o useEffect já vai cuidar disso
+    // se o searchTerm for limpo, por exemplo. Mas por segurança, podemos manter.
     fetchProducts();
   };
-
-  if (loading) return <div className="text-center mt-5">Carregando produtos...</div>;
+  
   if (error) return <div className="alert alert-danger mt-3">{error}</div>;
 
   return (
@@ -111,12 +121,29 @@ const ProductsPage: React.FC = () => {
         />
       ) : (
         <>
-        <button className="btn btn-primary mb-3" onClick={handleAddProduct}>
-                <FontAwesomeIcon icon={faPlus} className="me-2" /> Adicionar Produto
-        </button>
+          <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <button className="btn btn-primary" onClick={handleAddProduct}>
+              <FontAwesomeIcon icon={faPlus} className="me-2" /> Adicionar Produto
+            </button>
 
-          {products.length === 0 ? (
-            <div className="alert alert-info">Nenhum produto cadastrado.</div>
+            <div className="input-group" style={{ maxWidth: '400px' }}>
+              <span className="input-group-text">
+                <FontAwesomeIcon icon={faSearch} />
+              </span>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Buscar por nome ou descrição..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
+            </div>
+          </div>
+          
+          {loading ? (
+            <div className="text-center mt-5"><h4>Carregando produtos...</h4></div>
+          ) : products.length === 0 ? (
+            <div className="alert alert-info">{searchTerm ? `Nenhum produto encontrado para "${searchTerm}".` : 'Nenhum produto cadastrado.'}</div>
           ) : (
             <div className="table-responsive">
               <table className="table table-striped table-hover">
@@ -124,7 +151,6 @@ const ProductsPage: React.FC = () => {
                   <tr>
                     <th>Nome</th>
                     <th>Preço</th>
-                    {/* <<< PASSO 2: ADICIONAR O CABEÇALHO DA COLUNA DE ESTOQUE >>> */}
                     <th>Estoque</th>
                     <th>Descrição</th>
                     <th>Ações</th>
@@ -135,14 +161,9 @@ const ProductsPage: React.FC = () => {
                     <tr key={product._id}>
                       <td>{product.name}</td>
                       <td>R$ {product.price.toFixed(2).replace('.', ',')}</td>
-                      
-                      {/* <<< PASSO 3: ADICIONAR A CÉLULA DE DADOS DO ESTOQUE >>> */}
-                      {/* Adicionamos uma classe condicional para destacar estoque baixo/negativo */}
                       <td className={ (product.quantityInStock || 0) <= 0 ? 'text-danger fw-bold' : '' }>
-                        {/* Usamos '|| 0' para mostrar 0 em produtos antigos que ainda não têm o campo */}
                         {product.quantityInStock || 0}
                       </td>
-
                       <td>{product.description || 'N/A'}</td>
                       <td>
                         <button
