@@ -79,16 +79,21 @@ const OrderForm: React.FC<OrderFormProps> = ({ order, onSave, onCancel }) => {
         fetch(`${import.meta.env.VITE_API_BASE_URL}/api/customers`, {
           headers: { Authorization: `Bearer ${userToken}` }
         }),
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products`, {
+        // ## AQUI ESTÁ A CORREÇÃO IMPORTANTE ##
+        // Usando a nova rota /all que retorna a lista completa de produtos
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products/all`, {
           headers: { Authorization: `Bearer ${userToken}` }
         })
       ]);
       if (!customersResponse.ok) throw new Error('Falha ao buscar clientes.');
       if (!productsResponse.ok) throw new Error('Falha ao buscar produtos.');
+      
       const customersData: Customer[] = await customersResponse.json();
       const productsData: Product[] = await productsResponse.json();
+      
       setAllCustomers(customersData);
       setAllProducts(productsData);
+
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar dados para o pedido.');
     } finally {
@@ -177,17 +182,11 @@ const OrderForm: React.FC<OrderFormProps> = ({ order, onSave, onCancel }) => {
     product.name.toLowerCase().includes(productSearch.toLowerCase())
   );
 
-  // =========================================================================
-  // ### NOVA FUNCIONALIDADE ADICIONADA AQUI ###
-  // Este useEffect "assiste" a lista de clientes filtrados.
   useEffect(() => {
-    // A condição é: O usuário digitou algo E a busca resultou em apenas UM cliente
     if (customerSearch && filteredCustomers.length === 1) {
-      // Se a condição for verdadeira, seleciona automaticamente esse cliente.
       setSelectedCustomer(filteredCustomers[0]._id);
     }
-  }, [filteredCustomers, customerSearch]); // Roda sempre que a lista ou o termo de busca mudam.
-  // =========================================================================
+  }, [filteredCustomers, customerSearch]);
 
   if (loading) return <div className="text-center mt-5">Carregando dados para o formulário...</div>;
 

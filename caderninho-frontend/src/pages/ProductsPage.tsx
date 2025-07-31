@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import ProductForm from '../components/ProductForm';
+import Pagination from '../components/Pagination'; // Importa o novo componente de paginação
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faTrash, faSearch } from '@fortawesome/free-solid-svg-icons';
 
@@ -23,12 +24,18 @@ const ProductsPage: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Estados para controlar a paginação
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+
   const fetchProducts = useCallback(async () => {
     if (!userToken) return;
     setLoading(true);
     setError(null);
     try {
-      const url = `${import.meta.env.VITE_API_BASE_URL}/api/products?keyword=${encodeURIComponent(searchTerm)}`;
+      // Adiciona o número da página à URL da requisição
+      const url = `${import.meta.env.VITE_API_BASE_URL}/api/products?keyword=${encodeURIComponent(searchTerm)}&page=${page}`;
+      
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
@@ -40,16 +47,22 @@ const ProductsPage: React.FC = () => {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Falha ao buscar produtos.');
       }
-      const data: Product[] = await response.json();
-      setProducts(data);
+      
+      // Lê os dados de paginação da resposta da API
+      const data = await response.json();
+      setProducts(data.products);
+      setPage(data.page);
+      setPages(data.pages);
+
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar produtos.');
     } finally {
       setLoading(false);
     }
-  }, [userToken, searchTerm]);
+  }, [userToken, searchTerm, page]); // Adiciona 'page' às dependências
 
   useEffect(() => {
+    // Debounce: espera um pouco após o usuário parar de digitar para fazer a busca
     const delayDebounceFn = setTimeout(() => {
       fetchProducts();
     }, 500);
@@ -59,6 +72,7 @@ const ProductsPage: React.FC = () => {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
+    setPage(1); // Importante: Reseta para a página 1 a cada nova busca
   };
 
   const handleAddProduct = () => {
@@ -102,8 +116,6 @@ const ProductsPage: React.FC = () => {
   const handleFormSubmit = () => {
     setShowForm(false);
     setEditingProduct(null);
-    // Não precisa chamar fetchProducts() aqui, o useEffect já vai cuidar disso
-    // se o searchTerm for limpo, por exemplo. Mas por segurança, podemos manter.
     fetchProducts();
   };
   
@@ -145,47 +157,53 @@ const ProductsPage: React.FC = () => {
           ) : products.length === 0 ? (
             <div className="alert alert-info">{searchTerm ? `Nenhum produto encontrado para "${searchTerm}".` : 'Nenhum produto cadastrado.'}</div>
           ) : (
-            <div className="table-responsive">
-              <table className="table table-striped table-hover">
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>Preço</th>
-                    <th>Estoque</th>
-                    <th>Descrição</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map(product => (
-                    <tr key={product._id}>
-                      <td>{product.name}</td>
-                      <td>R$ {product.price.toFixed(2).replace('.', ',')}</td>
-                      <td className={ (product.quantityInStock || 0) <= 0 ? 'text-danger fw-bold' : '' }>
-                        {product.quantityInStock || 0}
-                      </td>
-                      <td>{product.description || 'N/A'}</td>
-                      <td>
-                        <button
-                            className="btn btn-warning btn-sm me-2"
-                            onClick={() => handleEditProduct(product)}
-                            title="Editar"
-                        >
-                            <FontAwesomeIcon icon={faEdit} />
-                        </button>
-                        <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleDeleteProduct(product._id)}
-                            title="Deletar"
-                        >
-                            <FontAwesomeIcon icon={faTrash} />
-                        </button>
-                    </td>
+            <>
+              <div className="table-responsive">
+                <table className="table table-striped table-hover">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Preço</th>
+                      <th>Estoque</th>
+                      <th>Descrição</th>
+                      <th>Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {products.map(product => (
+                      <tr key={product._id}>
+                        <td>{product.name}</td>
+                        <td>R$ {product.price.toFixed(2).replace('.', ',')}</td>
+                        <td className={ (product.quantityInStock || 0) <= 0 ? 'text-danger fw-bold' : '' }>
+                          {product.quantityInStock || 0}
+                        </td>
+                        <td>{product.description || 'N/A'}</td>
+                        <td>
+                          <button
+                              className="btn btn-warning btn-sm me-2"
+                              onClick={() => handleEditProduct(product)}
+                              title="Editar"
+                          >
+                              <FontAwesomeIcon icon={faEdit} />
+                          </button>
+                          <button
+                              className="btn btn-danger btn-sm"
+                              onClick={() => handleDeleteProduct(product._id)}
+                              title="Deletar"
+                          >
+                              <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="d-flex justify-content-center mt-4">
+                <Pagination pages={pages} page={page} onPageChange={setPage} />
+              </div>
+            </>
           )}
         </>
       )}

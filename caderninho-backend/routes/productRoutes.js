@@ -9,9 +9,9 @@ const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 // @route   GET /api/products
 router.get('/', protect, authorizeRoles('admin', 'employee'), async (req, res) => {
     try {
+        const pageSize = 10;
+        const page = Number(req.query.page) || 1;
         let query = {};
-
-        // Filtro por Palavra-Chave (busca no nome e na descrição)
         if (req.query.keyword) {
             const keyword = req.query.keyword;
             query.$or = [
@@ -19,14 +19,27 @@ router.get('/', protect, authorizeRoles('admin', 'employee'), async (req, res) =
                 { description: { $regex: keyword, $options: 'i' } }
             ];
         }
-
-        const products = await Product.find(query);
-
-        res.json(products);
+        const count = await Product.countDocuments(query);
+        const products = await Product.find(query).limit(pageSize).skip(pageSize * (page - 1));
+        res.json({ products, page, pages: Math.ceil(count / pageSize) });
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar produtos' });
     }
 });
+
+// =========================================================================
+// ## NOVA ROTA ADICIONADA AQUI ##
+// @desc    Obter TODOS os produtos (sem paginação, para formulários)
+// @route   GET /api/products/all
+router.get('/all', protect, authorizeRoles('admin', 'employee'), async (req, res) => {
+    try {
+        const products = await Product.find({}); // Busca todos os produtos sem filtro ou paginação
+        res.json(products); // Retorna a lista simples
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar todos os produtos' });
+    }
+});
+// =========================================================================
 
 // @desc    Criar um novo produto
 // @route   POST /api/products
