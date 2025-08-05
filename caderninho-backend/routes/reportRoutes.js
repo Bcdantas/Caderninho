@@ -7,21 +7,11 @@ const Order = require('../models/Order');
 const Debt = require('../models/Debt');
 const Product = require('../models/Product');
 const Payment = require('../models/Payment');
-
-// Importa as funções de data que vamos usar da biblioteca 'date-fns'
 const { 
-    startOfDay, 
-    endOfDay, 
-    startOfWeek, 
-    endOfWeek, 
-    startOfMonth, 
-    endOfMonth, 
-    subDays 
+    startOfDay, endOfDay, startOfWeek, endOfWeek, 
+    startOfMonth, endOfMonth, subDays 
 } = require('date-fns');
 
-/**
- * Função auxiliar para calcular o lucro em um período de tempo.
- */
 const calculateProfit = async (startDate, endDate) => {
     const result = await Payment.aggregate([
         { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
@@ -30,49 +20,28 @@ const calculateProfit = async (startDate, endDate) => {
     return result.length > 0 ? result[0].total : 0;
 };
 
-// =========================================================================
-// ## ROTA PRINCIPAL PARA A NOVA PÁGINA DE LUCROS ##
-// =========================================================================
-// @desc    Obter um resumo dos lucros por período
-// @route   GET /api/reports/profit-summary
-// @access  Private (Admin)
 router.get('/profit-summary', protect, authorizeRoles('admin'), async (req, res) => {
     try {
         const now = new Date();
         const yesterday = subDays(now, 1);
-
         const [todayProfit, yesterdayProfit, thisWeekProfit, thisMonthProfit, totalProfit] = await Promise.all([
             calculateProfit(startOfDay(now), endOfDay(now)),
             calculateProfit(startOfDay(yesterday), endOfDay(yesterday)),
             calculateProfit(startOfWeek(now, { weekStartsOn: 0 }), endOfWeek(now, { weekStartsOn: 0 })),
             calculateProfit(startOfMonth(now), endOfMonth(now)),
-            calculateProfit(new Date(0), now) // Lucro total
+            calculateProfit(new Date(0), now)
         ]);
-
         res.json({
-            today: todayProfit,
-            yesterday: yesterdayProfit,
-            thisWeek: thisWeekProfit,
-            thisMonth: thisMonthProfit,
-            total: totalProfit
+            today: todayProfit, yesterday: yesterdayProfit,
+            thisWeek: thisWeekProfit, thisMonth: thisMonthProfit, total: totalProfit
         });
-
     } catch (error) {
-        console.error('Erro ao calcular resumo de lucros:', error.message);
         res.status(500).json({ message: 'Erro no servidor ao calcular lucros.' });
     }
 });
 
-
-// =========================================================================
-// ## ROTAS ADICIONAIS PARA O DASHBOARD (Mantidas do seu arquivo original) ##
-// =========================================================================
-
-// @desc    Obter débitos maiores que R$ 100
-// @route   GET /api/reports/high-debts
 router.get('/high-debts', protect, authorizeRoles('admin'), async (req, res) => {
     try {
-        // Esta agregação é mais eficiente para buscar o total de dívidas por cliente
         const highDebts = await Debt.aggregate([
             { $match: { isPaid: false } },
             { $group: { _id: '$customer', totalDebt: { $sum: '$amount' } } },
@@ -88,7 +57,7 @@ router.get('/high-debts', protect, authorizeRoles('admin'), async (req, res) => 
     }
 });
 
-// @desc    Obter os 3 itens mais vendidos
+// @desc    Obter os 3 itens mais vendidos (ROBUSTO)
 // @route   GET /api/reports/top-selling-items
 router.get('/top-selling-items', protect, authorizeRoles('admin'), async (req, res) => {
     try {
@@ -97,15 +66,20 @@ router.get('/top-selling-items', protect, authorizeRoles('admin'), async (req, r
             { $group: { _id: '$items.product', totalSold: { $sum: '$items.quantity' } } },
             { $sort: { totalSold: -1 } },
             { $limit: 3 },
-            { $lookup: { from: 'products', localField: '$_id', foreignField: '_id', as: 'productDetails' } },
-            { $unwind: '$productDetails' },
+            { $lookup: { from: 'products', localField: '_id', foreignField: '_id', as: 'productDetails' } },
+            // =======================================================
+            // ## CORREÇÃO APLICADA AQUI ##
+            // Esta opção evita que o sistema quebre se um produto do pedido não for encontrado
+            { $unwind: { path: '$productDetails', preserveNullAndEmptyArrays: true } },
+            // =======================================================
+            { $match: { productDetails: { $exists: true, $ne: null } } }, // Garante que apenas produtos existentes sejam mostrados
             { $project: { _id: 0, name: '$productDetails.name', totalSold: 1 } }
         ]);
         res.json(topSellingItems);
     } catch (error) {
+        console.error('Erro ao buscar itens mais vendidos:', error.message);
         res.status(500).json({ message: 'Erro ao buscar itens mais vendidos' });
     }
 });
-
 
 module.exports = router;
