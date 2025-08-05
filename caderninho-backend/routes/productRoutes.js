@@ -3,10 +3,12 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
-const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
-// @desc    Obter produtos com filtros e busca
-// @route   GET /api/products
+
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+// =========================================================================
+
+// Rota para buscar produtos (permitido para admin e funcionário)
 router.get('/', protect, authorizeRoles('admin', 'employee'), async (req, res) => {
     try {
         const pageSize = 10;
@@ -27,22 +29,17 @@ router.get('/', protect, authorizeRoles('admin', 'employee'), async (req, res) =
     }
 });
 
-// =========================================================================
-// ## NOVA ROTA ADICIONADA AQUI ##
-// @desc    Obter TODOS os produtos (sem paginação, para formulários)
-// @route   GET /api/products/all
+// Rota para buscar todos os produtos para formulários (permitido para admin e funcionário)
 router.get('/all', protect, authorizeRoles('admin', 'employee'), async (req, res) => {
     try {
-        const products = await Product.find({}); // Busca todos os produtos sem filtro ou paginação
-        res.json(products); // Retorna a lista simples
+        const products = await Product.find({});
+        res.json(products);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar todos os produtos' });
     }
 });
-// =========================================================================
 
-// @desc    Criar um novo produto
-// @route   POST /api/products
+// Rotas de criação, atualização e deleção (permitido APENAS para admin)
 router.post('/', protect, authorizeRoles('admin'), async (req, res) => {
     const { name, price, description, quantityInStock } = req.body;
     if (!name || price === undefined) {
@@ -65,8 +62,6 @@ router.post('/', protect, authorizeRoles('admin'), async (req, res) => {
     }
 });
 
-// @desc    Atualizar um produto
-// @route   PUT /api/products/:id
 router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
     const { name, price, description, quantityInStock } = req.body;
     try {
@@ -89,8 +84,6 @@ router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
     }
 });
 
-// @desc    Deletar um produto
-// @route   DELETE /api/products/:id
 router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
     try {
         const product = await Product.findByIdAndDelete(req.params.id);

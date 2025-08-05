@@ -1,57 +1,44 @@
+// CAMINHO: caderninho-backend/models/User.js
+
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs'); // Para criptografar senhas
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
     username: {
         type: String,
-        required: true,
+        required: [true, 'O nome de usuário é obrigatório.'],
         unique: true,
-        trim: true // Remove espaços em branco do início e fim
+        trim: true,
     },
     password: {
         type: String,
-        required: true
+        required: [true, 'A senha é obrigatória.'],
+        minlength: 6,
     },
+    // ## GARANTIR QUE O CAMPO ROLE ESTEJA ASSIM ##
     role: {
         type: String,
-        enum: ['admin', 'employee'], // Define os papéis permitidos
-        default: 'employee'
-    }
+        enum: ['admin', 'employee'], // Define os únicos valores possíveis
+        default: 'employee',       // Define 'employee' como o padrão
+    },
 }, {
-    timestamps: true // Adiciona campos createdAt e updatedAt automaticamente
+    timestamps: true,
 });
 
-// Pré-salvamento: Hash da senha antes de salvar o usuário
+// Middleware para criptografar a senha antes de salvar
 userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) { // Só aplica o hash se a senha foi modificada
-        return next();
+    if (!this.isModified('password')) {
+        next();
     }
-    const salt = await bcrypt.genSalt(10); // Gera um "sal" para o hash
-    this.password = await bcrypt.hash(this.password, salt); // Aplica o hash
-    next();
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Método para comparar a senha fornecida com a senha criptografada
+// Método para comparar a senha digitada com a senha no banco de dados
 userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
-userSchema.virtual('orders', {
-    ref: 'Order',
-    localField: '_id',
-    foreignField: 'customer',
-    justOne: false,
-});
-// Garante que os virtuais sejam incluídos ao converter para JSON
-userSchema.methods.calculateTotalDebt = function() {
-    if (!this.orders) {
-        return 0; // Se orders não foi populado, ou se não há pedidos
-    }
-    const unpaidOrders = this.orders.filter(order => !order.isPaid);
-    const total = unpaidOrders.reduce((sum, order) => sum + order.totalAmount, 0); // Use totalAmount aqui
-    return total;
-};
 
-userSchema.set('toJSON', { virtuals: true });
-userSchema.set('toObject', { virtuals: true });
+const User = mongoose.model('User', userSchema);
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;

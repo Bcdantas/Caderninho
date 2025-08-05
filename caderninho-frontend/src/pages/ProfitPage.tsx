@@ -1,76 +1,147 @@
-import React, { useState, useEffect } from 'react';
+// CAMINHO: src/pages/ProfitPage.tsx
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faDollarSign } from '@fortawesome/free-solid-svg-icons'; // Ícones para spinner e cifrão
+import { 
+  faDollarSign, 
+  faChartLine, 
+  faCalendarDay, 
+  faCalendarWeek, 
+  faCalendarAlt 
+} from '@fortawesome/free-solid-svg-icons';
 
-interface TotalProfitReport {
-  totalProfit: number;
+// Interface para definir a estrutura dos dados que esperamos do backend
+interface ProfitSummary {
+  today: number;
+  yesterday: number;
+  thisWeek: number;
+  thisMonth: number;
+  total: number;
 }
 
 const ProfitPage: React.FC = () => {
-  const { userToken, userRole, showToast } = useAppContext();
-  const [totalProfit, setTotalProfit] = useState<number | null>(null);
+  const { userToken, showToast } = useAppContext();
+  const [summary, setSummary] = useState<ProfitSummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (userToken && userRole === 'admin') { // Apenas admin pode buscar
-      fetchTotalProfit();
-    } else if (userRole !== 'admin') {
-      setLoading(false);
-      setError('Acesso negado. Apenas administradores podem ver o lucro.');
-      showToast('Acesso negado. Apenas administradores podem ver o lucro.', 'danger');
-    }
-  }, [userToken, userRole]);
-
-  const fetchTotalProfit = async () => {
+  const fetchProfitSummary = useCallback(async () => {
+    if (!userToken) return;
     setLoading(true);
     setError(null);
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/total-profit`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/profit-summary`, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${userToken}`,
         },
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao buscar lucro total.');
+        throw new Error(errorData.message || 'Falha ao buscar o resumo de lucros.');
       }
-      const data: TotalProfitReport = await response.json();
-      setTotalProfit(data.totalProfit);
+      
+      const data: ProfitSummary = await response.json();
+      setSummary(data);
 
     } catch (err: any) {
-      setError(err.message || 'Erro ao carregar lucro total.');
-      console.error('Erro ao carregar lucro total:', err);
-      showToast(err.message || 'Erro ao carregar lucro total.', 'danger');
+      setError(err.message);
+      showToast(err.message, 'danger');
     } finally {
       setLoading(false);
     }
+  }, [userToken, showToast]);
+
+  useEffect(() => {
+    fetchProfitSummary();
+  }, [fetchProfitSummary]);
+
+  // Função para formatar os números como moeda brasileira (BRL)
+  const formatCurrency = (value: number) => {
+    return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
 
-  return (
-    <div className="container mt-4 text-center">
-      <h2 className="mb-4">Lucro Total</h2>
+  if (loading) {
+    return <div className="text-center mt-5"><h4>Carregando resumo de lucros...</h4></div>;
+  }
 
-      {loading ? (
-        <div className="text-center">
-          <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-primary" />
-          <p className="mt-2">Calculando lucro...</p>
-        </div>
-      ) : error ? (
-        <div className="alert alert-danger">{error}</div>
-      ) : (
-        <div className="card mx-auto" style={{ maxWidth: '400px' }}>
-          <div className="card-body">
-            <h5 className="card-title">Valor Bruto Recebido (Pedidos Pagos)</h5>
-            <p className="card-text fs-1 text-success">
-              <FontAwesomeIcon icon={faDollarSign} className="me-2" />
-              {totalProfit !== null ? totalProfit.toFixed(2).replace('.', ',') : '0,00'}
-            </p>
-            <p className="text-muted small">Este valor representa a soma de todos os 'Valores Pagos' de pedidos marcados como pagos.</p>
+  if (error) {
+    return <div className="container mt-4 alert alert-danger"><strong>Erro:</strong> {error}</div>;
+  }
+
+  return (
+    <div className="container mt-4">
+      <div className="d-flex align-items-center mb-4">
+        <FontAwesomeIcon icon={faChartLine} size="2x" className="text-primary me-3" />
+        <h2>Resumo de Lucros</h2>
+      </div>
+
+      {summary && (
+        <div className="row g-4">
+          {/* Card de Lucro Total */}
+          <div className="col-12">
+            <div className="card text-center text-white bg-primary shadow-lg">
+              <div className="card-header fs-5">
+                <FontAwesomeIcon icon={faDollarSign} className="me-2" />
+                Lucro Total (Desde o Início)
+              </div>
+              <div className="card-body">
+                <h1 className="display-4 fw-bold">{formatCurrency(summary.total)}</h1>
+              </div>
+            </div>
           </div>
+
+          {/* Cards de Períodos */}
+          <div className="col-md-6 col-lg-3">
+            <div className="card text-center shadow-sm">
+              <div className="card-header">
+                <FontAwesomeIcon icon={faCalendarDay} className="me-2" />
+                Hoje
+              </div>
+              <div className="card-body">
+                <h4 className="card-title fw-bold">{formatCurrency(summary.today)}</h4>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-md-6 col-lg-3">
+            <div className="card text-center shadow-sm">
+              <div className="card-header">
+                <FontAwesomeIcon icon={faCalendarDay} className="me-2 text-muted" />
+                Ontem
+              </div>
+              <div className="card-body">
+                <h4 className="card-title fw-bold">{formatCurrency(summary.yesterday)}</h4>
+              </div>
+            </div>
+          </div>
+          
+          <div className="col-md-6 col-lg-3">
+            <div className="card text-center shadow-sm">
+              <div className="card-header">
+                <FontAwesomeIcon icon={faCalendarWeek} className="me-2" />
+                Esta Semana
+              </div>
+              <div className="card-body">
+                <h4 className="card-title fw-bold">{formatCurrency(summary.thisWeek)}</h4>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-md-6 col-lg-3">
+            <div className="card text-center shadow-sm">
+              <div className="card-header">
+                <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+                Este Mês
+              </div>
+              <div className="card-body">
+                <h4 className="card-title fw-bold">{formatCurrency(summary.thisMonth)}</h4>
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
     </div>

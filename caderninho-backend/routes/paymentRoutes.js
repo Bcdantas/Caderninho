@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getPayments } = require('../controllers/paymentController');
-const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+const { protect, authorizeRoles('admin', 'employee')} = require('../middleware/authMiddleware');
 
 // Rota para obter todos os pagamentos
 // Apenas administradores podem acessar esta rota

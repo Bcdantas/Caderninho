@@ -1,6 +1,6 @@
 [33mf5694a8[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Enable 'employee' role access and improve context handling
 [33m97a08c6[m Restrict admin-only access and update dashboard UI
-[33m095ed45[m Refactor authorizeRoles usage and add debug logs
+[33m095ed45[m Refactor authorizeRoles('admin', 'employee')usage and add debug logs
 [33m40b80cd[m Restrict route access to admin role only
 [33m2d639d2[m Update authMiddleware.js
 [33m7e1eaad[m Restrict dashboard access to admin users
