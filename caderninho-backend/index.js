@@ -1,36 +1,26 @@
+// CAMINHO: caderninho-backend/index.js
+
 require('dotenv').config();
-console.log('--- Servidor Backend INICIADO! (Versão de Depuração) ---'); // <<-- ADICIONE ESTA LINHA!
 const express = require('express');
-const mongoose = require('mongoose'); // Importa o Mongoose para o MongoDB
-const cors = require('cors'); // Importa o CORS para comunicação entre front e back
+const cors = require('cors');
+const connectDB = require('./config/db'); // Importa nossa função de conexão
 
-const app = express(); // Inicializa o Express
-const PORT = process.env.PORT || 4000; // Define a porta do servidor, ou 4000 por padrão
-const MONGO_URI = process.env.MONGO_URI; // Pega a string de conexão do MongoDB do .env
-
-const userRoutes = require('./routes/userRoutes'); // Importa as rotas de usuário
-
+// Importação das rotas
+const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const debtRoutes = require('./routes/debtRoutes');
-
 const reportRoutes = require('./routes/reportRoutes');
-const { protect } = require('./middleware/authMiddleware'); // Importa o middleware
+const expenseRoutes = require('./routes/expenseRoutes');
 
-// Middlewares (regras para todas as requisições)
-app.use(cors()); // Permite requisições de outras origens
-app.use(express.json()); // Permite que o servidor entenda dados em formato JSON
+const app = express();
+const PORT = process.env.PORT || 4000;
+const HOST = '0.0.0.0'; 
 
-// Conexão com o MongoDB
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('Conectado com sucesso ao MongoDB Atlas!'))
-    .catch(err => console.error('Erro de conexão com o MongoDB:', err));
-
-// Rota de teste simples
-app.get('/', (req, res) => {
-    res.send('API Caderninho está funcionando!');
-});
+// Middlewares
+app.use(cors());
+app.use(express.json());
 
 // Rotas da API
 app.use('/api/users', userRoutes);
@@ -38,12 +28,26 @@ app.use('/api/products', productRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/debts', debtRoutes);
-// Novas rotas de relatórios, todas protegidas
-app.use('/api/reports', protect, reportRoutes); // Todas as rotas de relatório usarão 'protect'
+app.use('/api/expenses', expenseRoutes);
+app.use('/api/reports', reportRoutes);
 
-// Iniciar o servidor
-const HOST = '0.0.0.0'; 
-app.listen(PORT, HOST, () => {
-    console.log(`Servidor rodando na porta ${PORT} no endereço ${HOST}`);
-    // REMOVIDO: A linha problemática de console.log com os.networkInterfaces() para evitar erro
-});
+
+// Função para iniciar o servidor
+const startServer = async () => {
+  try {
+    // 1. PRIMEIRO, conecta ao banco de dados e ESPERA a conexão ser concluída
+    await connectDB();
+    
+    // 2. SÓ DEPOIS, inicia o servidor para ouvir por requisições
+    app.listen(PORT, HOST, () => {
+      console.log(`Servidor rodando na porta ${PORT} no endereço ${HOST}`);
+    });
+
+  } catch (error) {
+    console.error("Falha ao iniciar o servidor", error);
+    process.exit(1);
+  }
+};
+
+// Chama a função para iniciar o servidor
+startServer();

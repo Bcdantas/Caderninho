@@ -5,10 +5,25 @@ import { useAppContext } from '../context/AppContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, faExclamationTriangle, faTags } from '@fortawesome/free-solid-svg-icons';
 
-// Interfaces para os dados que esperamos
-interface ProfitSummary { today: number; yesterday: number; }
-interface HighDebt { customerId: string | number; customerName: string; totalDebt: number; }
-interface TopItem { name: string; totalSold: number; }
+// <<< PASSO 1: ATUALIZAR AS INTERFACES PARA O NOVO FORMATO DE DADOS >>>
+interface PeriodSummary {
+  gains: number;
+  losses: number;
+  net: number;
+}
+interface ProfitSummary {
+  today: PeriodSummary;
+  yesterday: PeriodSummary;
+}
+interface HighDebt {
+  customerName: string;
+  totalDebt: number;
+  customerId: string;
+}
+interface TopItem {
+  name: string;
+  totalSold: number;
+}
 
 interface DashboardData {
   profitSummary: ProfitSummary;
@@ -29,16 +44,15 @@ const DashboardPage: React.FC = () => {
     try {
       const config = { headers: { 'Authorization': `Bearer ${userToken}` } };
       
-      // Fazemos todas as chamadas à API em paralelo para mais velocidade
       const [profitRes, highDebtsRes, topItemsRes] = await Promise.all([
         fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/profit-summary`, config),
         fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/high-debts`, config),
         fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/top-selling-items`, config)
       ]);
 
-      if (!profitRes.ok || !highDebtsRes.ok || !topItemsRes.ok) {
-        throw new Error('Falha ao carregar um ou mais relatórios do dashboard.');
-      }
+      if (!profitRes.ok) throw new Error(`Falha ao buscar resumo de lucros: ${profitRes.statusText}`);
+      if (!highDebtsRes.ok) throw new Error(`Falha ao buscar maiores fiados: ${highDebtsRes.statusText}`);
+      if (!topItemsRes.ok) throw new Error(`Falha ao buscar itens mais vendidos: ${topItemsRes.statusText}`);
 
       const profitSummary = await profitRes.json();
       const highDebts = await highDebtsRes.json();
@@ -70,15 +84,16 @@ const DashboardPage: React.FC = () => {
         {/* Coluna da Esquerda: Lucros */}
         <div className="col-lg-4">
           <div className="card shadow-sm h-100">
-            <div className="card-header fs-5"><FontAwesomeIcon icon={faChartLine} className="me-2 text-success" />Resumo de Lucros</div>
+            <div className="card-header fs-5"><FontAwesomeIcon icon={faChartLine} className="me-2 text-success" />Resumo de Ganhos</div>
             <div className="list-group list-group-flush">
               <div className="list-group-item d-flex justify-content-between align-items-center">
-                <span>Lucro de Hoje</span>
-                <span className="fw-bold fs-5">{formatCurrency(data?.profitSummary.today || 0)}</span>
+                <span>Ganhos de Hoje</span>
+                {/* <<< PASSO 2: USAR A PROPRIEDADE CORRETA (.gains) >>> */}
+                <span className="fw-bold fs-5">{formatCurrency(data?.profitSummary.today.gains || 0)}</span>
               </div>
               <div className="list-group-item d-flex justify-content-between align-items-center">
-                <span>Lucro de Ontem</span>
-                <span className="fw-bold">{formatCurrency(data?.profitSummary.yesterday || 0)}</span>
+                <span>Ganhos de Ontem</span>
+                <span className="fw-bold">{formatCurrency(data?.profitSummary.yesterday.gains || 0)}</span>
               </div>
             </div>
           </div>
@@ -97,7 +112,7 @@ const DashboardPage: React.FC = () => {
                   </li>
                 ))}
               </ul>
-            ) : (<div className="card-body text-muted">Nenhum cliente com dívida alta.</div>)}
+            ) : (<div className="card-body text-muted">Nenhum cliente com fiado alto.</div>)}
           </div>
         </div>
 
