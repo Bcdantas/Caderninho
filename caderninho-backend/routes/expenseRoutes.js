@@ -10,7 +10,7 @@ const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 // @access  Private (Admin)
 router.get('/', protect, authorizeRoles('admin'), async (req, res) => {
     try {
-        const expenses = await Expense.find({}).sort({ expenseDate: -1 });
+        const expenses = await Expense.find({}).sort({ createdAt: -1 });
         res.json(expenses);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar despesas.' });
@@ -31,7 +31,7 @@ router.post('/', protect, authorizeRoles('admin'), async (req, res) => {
         const expense = new Expense({
             amount,
             description,
-            user: req.user._id // Associa a despesa ao usuário logado
+            user: req.user._id
         });
 
         const createdExpense = await expense.save();
@@ -41,6 +41,44 @@ router.post('/', protect, authorizeRoles('admin'), async (req, res) => {
     }
 });
 
-// Futuramente, podemos adicionar rotas para editar e deletar despesas aqui.
+// @desc    Atualizar (Editar) uma despesa
+// @route   PUT /api/expenses/:id
+// @access  Private (Admin)
+router.put('/:id', protect, authorizeRoles('admin'), async (req, res) => {
+    const { amount, description } = req.body;
+
+    try {
+        const expense = await Expense.findById(req.params.id);
+
+        if (expense) {
+            expense.amount = amount || expense.amount;
+            expense.description = description || expense.description;
+            
+            const updatedExpense = await expense.save();
+            res.json(updatedExpense);
+        } else {
+            res.status(404).json({ message: 'Despesa não encontrada.' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao atualizar despesa.' });
+    }
+});
+
+// @desc    Excluir uma despesa
+// @route   DELETE /api/expenses/:id
+// @access  Private (Admin)
+router.delete('/:id', protect, authorizeRoles('admin'), async (req, res) => {
+    try {
+        const expense = await Expense.findByIdAndDelete(req.params.id);
+
+        if (expense) {
+            res.json({ message: 'Despesa removida com sucesso.' });
+        } else {
+            res.status(404).json({ message: 'Despesa não encontrada.' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao excluir despesa.' });
+    }
+});
 
 module.exports = router;
