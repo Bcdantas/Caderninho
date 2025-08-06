@@ -9,8 +9,7 @@ const Product = require('../models/Product');
 const Debt = require('../models/Debt');
 const Payment = require('../models/Payment');
 
-// @desc    Obter todos os pedidos
-// @route   GET /api/orders
+// GET all orders
 router.get('/', protect, async (req, res) => {
     try {
         let filter = {};
@@ -22,8 +21,7 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// @desc    Obter um pedido por ID
-// @route   GET /api/orders/:id
+// GET order by ID
 router.get('/:id', protect, async (req, res) => {
     try {
         const order = await Order.findById(req.params.id).populate('customer', 'name phone').populate('items.product', 'name price');
@@ -37,8 +35,7 @@ router.get('/:id', protect, async (req, res) => {
     }
 });
 
-// @desc    Criar um novo pedido e DEBITAR o estoque
-// @route   POST /api/orders
+// POST new order
 router.post('/', protect, async (req, res) => {
     const { customerId, items } = req.body;
     if (!customerId || !items || items.length === 0) {
@@ -74,11 +71,9 @@ router.post('/', protect, async (req, res) => {
     }
 });
 
-// @desc    Atualizar um pedido e AJUSTAR o estoque
-// @route   PUT /api/orders/:id
+// PUT update order
 router.put('/:id', protect, async (req, res) => {
     const { customerId, items: newItems } = req.body;
-    
     try {
         const originalOrder = await Order.findById(req.params.id);
         if (!originalOrder) return res.status(404).json({ message: 'Pedido não encontrado.' });
@@ -88,19 +83,16 @@ router.put('/:id', protect, async (req, res) => {
         originalOrder.items.forEach(item => {
             originalItemsMap.set(item.product.toString(), item.quantity);
         });
-
         const newItemsMap = new Map();
         newItems.forEach(item => {
             newItemsMap.set(item.productId.toString(), item.quantity);
         });
-
         const allProductIds = new Set([...originalItemsMap.keys(), ...newItemsMap.keys()]);
 
         for (const productId of allProductIds) {
             const originalQty = originalItemsMap.get(productId) || 0;
             const newQty = newItemsMap.get(productId) || 0;
             const difference = newQty - originalQty;
-
             if (difference !== 0) {
                 await Product.findByIdAndUpdate(productId, {
                     $inc: { quantityInStock: -difference }
@@ -125,14 +117,12 @@ router.put('/:id', protect, async (req, res) => {
         const updatedOrder = await originalOrder.save();
         await Debt.findOneAndUpdate({ order: updatedOrder._id, isPaid: false }, { amount: totalAmount });
         res.json(updatedOrder);
-
     } catch (error) {
         res.status(500).json({ message: 'Erro ao atualizar pedido', error: error.message });
     }
 });
 
-// @desc    Marcar pedido como pago
-// @route   PUT /api/orders/:id/pay
+// PUT pay for order
 router.put('/:id/pay', protect, async (req, res) => {
     const { paidAmount, paymentMethod } = req.body;
     try {
@@ -144,22 +134,30 @@ router.put('/:id/pay', protect, async (req, res) => {
 
         order.isPaid = true;
         await order.save();
-        const payment = new Payment({ customer: order.customer, order: order._id, amount: paidAmount, paymentMethod: paymentMethod, paymentDate: new Date() });
+
+        // Cria o pagamento sem o campo 'paymentDate'
+        const payment = new Payment({
+            customer: order.customer,
+            order: order._id,
+            amount: paidAmount,
+            paymentMethod: paymentMethod
+        });
         await payment.save();
+
         await Debt.findOneAndUpdate({ order: order._id }, { isPaid: true });
+        
         const customer = await Customer.findById(order.customer);
         if (customer) {
             customer.totalDebt -= order.totalAmount; 
             await customer.save();
         }
-        res.json({ message: 'Pedido marcado como pago e dívida atualizada com sucesso!', order: order, payment: payment, customerDebt: customer ? customer.totalDebt : null });
+        res.json({ message: 'Pedido marcado como pago e dívida atualizada com sucesso!', order, payment, customerDebt: customer ? customer.totalDebt : null });
     } catch (error) {
         res.status(500).json({ message: 'Erro ao processar pagamento do pedido', error: error.message });
     }
 });
 
-// @desc    Deletar um pedido e DEVOLVER o estoque
-// @route   DELETE /api/orders/:id
+// DELETE order
 router.delete('/:id', protect, async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);

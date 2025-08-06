@@ -1,48 +1,49 @@
-const Payment = require('../models/Payment');
-const Customer = require('../models/Customer'); // Para popular o nome do cliente
-const Order = require('../models/Order'); // Para popular detalhes do pedido, se necessário
+// CAMINHO: caderninho-backend/controllers/paymentController.js
 
-// @desc    Get all payments with filters
+const Payment = require('../models/Payment');
+
+// @desc    Obter todos os pagamentos com filtros e paginação
 // @route   GET /api/payments
-// @access  Private (Admin only)
 exports.getPayments = async (req, res) => {
   try {
+    const pageSize = 15;
+    const page = Number(req.query.page) || 1;
     const { customerId, startDate, endDate } = req.query;
     let filter = {};
 
-    // Filtrar por cliente
     if (customerId) {
       filter.customer = customerId;
     }
-
-    // Filtrar por data
+    
+    // Filtro de data padronizado para usar 'createdAt'
     if (startDate || endDate) {
-      filter.paymentDate = {};
+      filter.createdAt = {};
       if (startDate) {
-        filter.paymentDate.$gte = new Date(startDate);
+        filter.createdAt.$gte = new Date(startDate);
       }
       if (endDate) {
-        // Para incluir o dia inteiro do endDate, adicionamos 23:59:59.999
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        filter.paymentDate.$lte = end;
+        filter.createdAt.$lte = end;
       }
     }
 
+    const count = await Payment.countDocuments(filter);
+    
     const payments = await Payment.find(filter)
-      .populate({
-        path: 'customer',
-        select: 'name email phone' // Seleciona apenas os campos necessários do cliente
-      })
-      .populate({
-        path: 'order',
-        select: 'totalAmount products' // Seleciona campos do pedido. Pode adicionar mais se precisar de detalhes do pedido na lista.
-      })
-      .sort({ paymentDate: -1 }); // Ordena do mais recente para o mais antigo
+      .populate('customer', 'name')
+      .populate('order', 'totalAmount')
+      .sort({ createdAt: -1 }) // Ordena por 'createdAt'
+      .limit(pageSize)
+      .skip(pageSize * (page - 1));
 
-    res.status(200).json(payments);
+    res.status(200).json({
+      payments,
+      page,
+      pages: Math.ceil(count / pageSize)
+    });
+
   } catch (error) {
-    console.error('Error fetching payments:', error);
     res.status(500).json({ message: 'Erro ao buscar histórico de pagamentos', error: error.message });
   }
 };

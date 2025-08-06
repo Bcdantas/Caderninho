@@ -14,7 +14,7 @@ interface Debt { _id:string; customer: Customer; order: Order; amount: number; i
 interface GroupedDebt { customer: Customer; totalDebt: number; individualDebts: Debt[]; }
 
 const DebtsPage: React.FC = () => {
-  const { userToken, showToast } = useAppContext();
+  const { userToken, showToast, logout } = useAppContext();
   const [groupedDebts, setGroupedDebts] = useState<GroupedDebt[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,15 +28,21 @@ const DebtsPage: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/debts`, {
         headers: { 'Authorization': `Bearer ${userToken}` },
       });
+
       if (!response.ok) {
+        if (response.status === 401) {
+          showToast('Sua sessão expirou. Por favor, faça o login novamente.', 'warning');
+          logout();
+          return;
+        }
         const errorData = await response.json();
         throw new Error(errorData.message || 'Falha ao buscar fiados.');
       }
+      
       const data: Debt[] = await response.json();
-
+      const validData = data.filter(debt => debt.customer && debt.customer._id);
       const debtsMap = new Map<string, GroupedDebt>();
-      data.forEach(debt => {
-        if (!debt.customer?._id) return;
+      validData.forEach(debt => {
         const customerId = debt.customer._id;
         if (!debtsMap.has(customerId)) {
           debtsMap.set(customerId, {
@@ -52,41 +58,35 @@ const DebtsPage: React.FC = () => {
       setGroupedDebts(Array.from(debtsMap.values()));
     } catch (err: any) {
       setError(err.message);
-      showToast(err.message, 'danger');
     } finally {
       setLoading(false);
     }
-  }, [userToken, showToast]);
+  }, [userToken, showToast, logout]);
 
   useEffect(() => {
     fetchDebts();
   }, [fetchDebts]);
 
   const handleMarkAsPaid = async (debtId: string) => {
-    if (!window.confirm('Tem certeza que deseja marcar este fiado como pago?')) {
-      return;
-    }
-    if (!userToken) {
-      showToast('Você precisa estar logado.', 'danger');
-      return;
-    }
-    
+    if (!window.confirm('Tem certeza que deseja marcar este fiado como pago?')) return;
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/debts/${debtId}/pay`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ paymentMethod: 'Dinheiro' })
       });
-
       if (!response.ok) {
+        if (response.status === 401) {
+          showToast('Sua sessão expirou. Por favor, faça o login novamente.', 'warning');
+          logout();
+          return;
+        }
         const errorData = await response.json();
         throw new Error(errorData.message || 'Falha ao marcar fiado como pago.');
       }
-
       showToast('Fiado pago com sucesso!', 'success');
       fetchDebts();
     } catch (err: any) {
-      setError(err.message);
       showToast(err.message, 'danger');
     }
   };
@@ -96,22 +96,18 @@ const DebtsPage: React.FC = () => {
   };
 
   if (loading) return <div className="text-center mt-5"><h4>Carregando fiados...</h4></div>;
-  
+  if (error) return <div className="container mt-4 alert alert-danger"><strong>Erro:</strong> {error}</div>;
+
   return (
     <div className="container mt-4">
-      {/* ======================================================= */}
-      {/* ## ALTERAÇÃO APLICADA AQUI ## */}
       <h2 className="mb-4">Fiados Pendentes</h2>
-      {/* ======================================================= */}
-      {error && <div className="alert alert-danger">{error}</div>}
-
       {groupedDebts.length === 0 ? (
         <div className="alert alert-info">Não há fiados pendentes no momento.</div>
       ) : (
         <div className="accordion" id="debtsAccordion">
           {groupedDebts.map(groupedDebt => (
             <div className="accordion-item" key={groupedDebt.customer._id}>
-              <h2 className="accordion-header" id={`heading-${groupedDebt.customer._id}`}>
+              <h2 className="accordion-header">
                 <button 
                   className={`accordion-button ${expandedCustomerId !== groupedDebt.customer._id ? 'collapsed' : ''}`} 
                   type="button" 
@@ -122,7 +118,6 @@ const DebtsPage: React.FC = () => {
                 </button>
               </h2>
               <div 
-                id={`collapse-${groupedDebt.customer._id}`} 
                 className={`accordion-collapse collapse ${expandedCustomerId === groupedDebt.customer._id ? 'show' : ''}`}
               >
                 <div className="accordion-body">
