@@ -1,13 +1,15 @@
+// CAMINHO: caderninho-backend/routes/userRoutes.js
+
 const express = require('express');
 const router = express.Router();
-// Importa as funções do controller
-const { registerUser, authUser, getAllUsers } = require('../controllers/userController');
-// Importa o middleware de proteção
-const { protect } = require('../middleware/authMiddleware');
+const { authUser, registerUser } = require('../controllers/userController');
 
-// Rotas públicas
-router.post('/register', registerUser); // Chama a função registerUser do controller
-router.post('/login', authUser);       // Chama a função authUser do controller
+router.post('/login', authUser);
+router.post('/register', registerUser);
 
+// Rota pública para obter o nome do estabelecimento
+router.get('/establishment-name', (req, res) => {
+    res.json({ establishmentName: process.env.ESTABLISHMENT_NAME || 'Caderninho' });
+});
 
 module.exports = router;
