@@ -1,6 +1,7 @@
 // CAMINHO: src/context/AppContext.tsx
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface ToastMessage {

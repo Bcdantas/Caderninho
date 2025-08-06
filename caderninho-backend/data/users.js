@@ -11,6 +11,11 @@ const users = [
     password: 'password123',
     role: 'employee',
   },
+  {
+    username: 'NicolinoDono',
+    password: 'NicoNI@2025',
+    role: 'admin',
+  },
 ];
 
 module.exports = users;
