@@ -135,11 +135,12 @@ router.put('/:id/pay', protect, async (req, res) => {
         order.isPaid = true;
         await order.save();
 
-        // Cria o pagamento sem o campo 'paymentDate'
         const payment = new Payment({
             customer: order.customer,
             order: order._id,
-            amount: paidAmount,
+            // <<< MUDANÇA CRÍTICA AQUI >>>
+            // Salvamos o valor real do pedido, não o valor que o cliente deu para o troco.
+            amount: order.totalAmount,
             paymentMethod: paymentMethod
         });
         await payment.save();
