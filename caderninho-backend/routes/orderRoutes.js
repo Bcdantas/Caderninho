@@ -6,15 +6,12 @@ const { protect } = require('../middleware/authMiddleware');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Product = require('../models/Product');
-const Debt = require('../models/Debt');
 const Payment = require('../models/Payment');
 
-// GET all orders
+// GET all active orders
 router.get('/', protect, async (req, res) => {
     try {
-        let filter = {};
-        if (req.query.isPaid !== undefined) { filter.isPaid = req.query.isPaid === 'true'; }
-        const orders = await Order.find(filter).populate('customer', 'name phone').populate('items.product', 'name price').sort({ createdAt: -1 });
+        const orders = await Order.find({ isPaid: false }).populate('customer', 'name phone').populate('items.product', 'name price').sort({ createdAt: -1 });
         res.json(orders);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar pedidos', error: error.message });
@@ -38,7 +35,7 @@ router.get('/:id', protect, async (req, res) => {
 // POST new order
 router.post('/', protect, async (req, res) => {
     const { customerId, items } = req.body;
-    if (!customerId || !items || items.length === 0) {
+    if (!customerId || !items || !items.length) {
         return res.status(400).json({ message: 'Cliente e itens do pedido são obrigatórios.' });
     }
     try {
@@ -57,8 +54,6 @@ router.post('/', protect, async (req, res) => {
 
         const order = new Order({ customer: customerId, items: orderItems, totalAmount, isPaid: false });
         const createdOrder = await order.save();
-        const debt = new Debt({ customer: customerId, order: createdOrder._id, amount: totalAmount, isPaid: false });
-        await debt.save();
 
         for (const item of createdOrder.items) {
             await Product.findByIdAndUpdate(item.product, {
@@ -67,6 +62,7 @@ router.post('/', protect, async (req, res) => {
         }
         res.status(201).json(createdOrder);
     } catch (error) {
+        console.error("Erro ao criar pedido:", error);
         res.status(500).json({ message: 'Erro ao criar pedido', error: error.message });
     }
 });
@@ -77,8 +73,7 @@ router.put('/:id', protect, async (req, res) => {
     try {
         const originalOrder = await Order.findById(req.params.id);
         if (!originalOrder) return res.status(404).json({ message: 'Pedido não encontrado.' });
-        if (originalOrder.isPaid) return res.status(400).json({ message: 'Não é possível editar um pedido já pago.' });
-
+        
         const originalItemsMap = new Map();
         originalOrder.items.forEach(item => {
             originalItemsMap.set(item.product.toString(), item.quantity);
@@ -88,7 +83,6 @@ router.put('/:id', protect, async (req, res) => {
             newItemsMap.set(item.productId.toString(), item.quantity);
         });
         const allProductIds = new Set([...originalItemsMap.keys(), ...newItemsMap.keys()]);
-
         for (const productId of allProductIds) {
             const originalQty = originalItemsMap.get(productId) || 0;
             const newQty = newItemsMap.get(productId) || 0;
@@ -99,23 +93,22 @@ router.put('/:id', protect, async (req, res) => {
                 });
             }
         }
-
-        let totalAmount = 0;
+        
+        let newTotalAmount = 0;
         const processedItems = [];
         for (const item of newItems) {
             const product = await Product.findById(item.productId);
             if (!product) return res.status(404).json({ message: `Produto com ID ${item.productId} não encontrado.` });
             if (item.quantity <= 0) return res.status(400).json({ message: `Quantidade inválida.` });
             processedItems.push({ product: product._id, quantity: item.quantity, priceAtOrder: product.price });
-            totalAmount += product.price * item.quantity;
+            newTotalAmount += product.price * item.quantity;
         }
 
         originalOrder.customer = customerId || originalOrder.customer;
         originalOrder.items = processedItems;
-        originalOrder.totalAmount = totalAmount;
+        originalOrder.totalAmount = newTotalAmount;
 
         const updatedOrder = await originalOrder.save();
-        await Debt.findOneAndUpdate({ order: updatedOrder._id, isPaid: false }, { amount: totalAmount });
         res.json(updatedOrder);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao atualizar pedido', error: error.message });
@@ -132,27 +125,17 @@ router.put('/:id/pay', protect, async (req, res) => {
         if (typeof paidAmount !== 'number' || paidAmount <= 0) return res.status(400).json({ message: 'Valor pago inválido.' });
         if (!paymentMethod) return res.status(400).json({ message: 'Método de pagamento é obrigatório.' });
 
-        order.isPaid = true;
-        await order.save();
-
         const payment = new Payment({
             customer: order.customer,
             order: order._id,
-            // <<< MUDANÇA CRÍTICA AQUI >>>
-            // Salvamos o valor real do pedido, não o valor que o cliente deu para o troco.
             amount: order.totalAmount,
             paymentMethod: paymentMethod
         });
         await payment.save();
-
-        await Debt.findOneAndUpdate({ order: order._id }, { isPaid: true });
         
-        const customer = await Customer.findById(order.customer);
-        if (customer) {
-            customer.totalDebt -= order.totalAmount; 
-            await customer.save();
-        }
-        res.json({ message: 'Pedido marcado como pago e dívida atualizada com sucesso!', order, payment, customerDebt: customer ? customer.totalDebt : null });
+        await Order.deleteOne({ _id: order._id });
+
+        res.json({ message: 'Pedido marcado como pago e removido com sucesso!', order, payment });
     } catch (error) {
         res.status(500).json({ message: 'Erro ao processar pagamento do pedido', error: error.message });
     }
@@ -163,14 +146,12 @@ router.delete('/:id', protect, async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
         if (order) {
-            if (!order.isPaid) {
-                for (const item of order.items) {
-                    await Product.findByIdAndUpdate(item.product, {
-                        $inc: { quantityInStock: item.quantity }
-                    });
-                }
+            for (const item of order.items) {
+                await Product.findByIdAndUpdate(item.product, {
+                    $inc: { quantityInStock: item.quantity }
+                });
             }
-            await Debt.deleteOne({ order: order._id });
+
             await order.deleteOne();
             res.json({ message: 'Pedido removido e estoque ajustado com sucesso.' });
         } else {

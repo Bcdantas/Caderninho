@@ -10,8 +10,13 @@ const paymentSchema = new mongoose.Schema({
     },
     order: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true,
+        required: false, // <<< MUDANÇA: Um pagamento não precisa mais estar ligado a um pedido
         ref: 'Order'
+    },
+    debt: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false, // <<< NOVO: Referência à dívida que está sendo paga
+        ref: 'Debt'
     },
     amount: {
         type: Number,
@@ -22,7 +27,7 @@ const paymentSchema = new mongoose.Schema({
         required: true
     },
 }, {
-    timestamps: true // Usa o 'createdAt' automático como data oficial do pagamento
+    timestamps: true
 });
 
 const Payment = mongoose.model('Payment', paymentSchema);

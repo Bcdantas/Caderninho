@@ -9,8 +9,6 @@ const generateToken = (id) => {
     });
 };
 
-// @desc    Registrar um novo usuário
-// @route   POST /api/users/register
 exports.registerUser = async (req, res) => {
     const { username, password, role } = req.body;
     try {
@@ -31,8 +29,6 @@ exports.registerUser = async (req, res) => {
     }
 };
 
-// @desc    Autenticar um usuário e obter um token (login)
-// @route   POST /api/users/login
 exports.authUser = async (req, res) => {
     const { username, password } = req.body;
     try {

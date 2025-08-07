@@ -6,9 +6,7 @@ const Product = require('../models/Product');
 
 
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
-// =========================================================================
 
-// Rota para buscar produtos (permitido para admin e funcionário)
 router.get('/', protect, authorizeRoles('admin', 'employee'), async (req, res) => {
     try {
         const pageSize = 10;
@@ -29,7 +27,6 @@ router.get('/', protect, authorizeRoles('admin', 'employee'), async (req, res) =
     }
 });
 
-// Rota para buscar todos os produtos para formulários (permitido para admin e funcionário)
 router.get('/all', protect, authorizeRoles('admin', 'employee'), async (req, res) => {
     try {
         const products = await Product.find({});
@@ -39,7 +36,6 @@ router.get('/all', protect, authorizeRoles('admin', 'employee'), async (req, res
     }
 });
 
-// Rotas de criação, atualização e deleção (permitido APENAS para admin)
 router.post('/', protect, authorizeRoles('admin'), async (req, res) => {
     const { name, price, description, quantityInStock } = req.body;
     if (!name || price === undefined) {

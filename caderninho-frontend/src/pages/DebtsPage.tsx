@@ -2,151 +2,123 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
+import PartialPaymentModal from '../components/PartialPaymentModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
+import { faDollarSign, faSyncAlt } from '@fortawesome/free-solid-svg-icons';
 
-// --- Interfaces ---
-interface Product { _id: string; name: string; price: number; }
-interface Customer { _id: string; name: string; phone?: string; }
-interface OrderItem { product: Product; quantity: number; priceAtOrder: number; }
-interface Order { _id: string; customer: Customer; items: OrderItem[]; totalAmount: number; isPaid: boolean; createdAt: string; updatedAt: string; }
-interface Debt { _id:string; customer: Customer; order: Order; amount: number; isPaid: boolean; createdAt: string; }
-interface GroupedDebt { customer: Customer; totalDebt: number; individualDebts: Debt[]; }
+export interface Debtor {
+  customerId: string;
+  customerName: string;
+  totalDebt: number;
+}
 
 const DebtsPage: React.FC = () => {
   const { userToken, showToast, logout } = useAppContext();
-  const [groupedDebts, setGroupedDebts] = useState<GroupedDebt[]>([]);
+  const [debtors, setDebtors] = useState<Debtor[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
+  
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [debtorToPay, setDebtorToPay] = useState<Debtor | null>(null);
 
-  const fetchDebts = useCallback(async () => {
+  const fetchDebtsSummary = useCallback(async () => {
     if (!userToken) return;
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/debts`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/debts/summary`, {
         headers: { 'Authorization': `Bearer ${userToken}` },
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          showToast('Sua sessão expirou. Por favor, faça o login novamente.', 'warning');
-          logout();
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao buscar fiados.');
+        if (response.status === 401) { logout(); return; }
+        throw new Error('Falha ao buscar o resumo de fiados.');
       }
       
-      const data: Debt[] = await response.json();
-      const validData = data.filter(debt => debt.customer && debt.customer._id);
-      const debtsMap = new Map<string, GroupedDebt>();
-      validData.forEach(debt => {
-        const customerId = debt.customer._id;
-        if (!debtsMap.has(customerId)) {
-          debtsMap.set(customerId, {
-            customer: debt.customer,
-            totalDebt: 0,
-            individualDebts: []
-          });
-        }
-        const grouped = debtsMap.get(customerId)!;
-        grouped.totalDebt += debt.amount;
-        grouped.individualDebts.push(debt);
-      });
-      setGroupedDebts(Array.from(debtsMap.values()));
+      const data: Debtor[] = await response.json();
+      setDebtors(data);
+
     } catch (err: any) {
       setError(err.message);
+      showToast(err.message, 'danger');
     } finally {
       setLoading(false);
     }
   }, [userToken, showToast, logout]);
 
   useEffect(() => {
-    fetchDebts();
-  }, [fetchDebts]);
+    fetchDebtsSummary();
+  }, [fetchDebtsSummary]);
 
-  const handleMarkAsPaid = async (debtId: string) => {
-    if (!window.confirm('Tem certeza que deseja marcar este fiado como pago?')) return;
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/debts/${debtId}/pay`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentMethod: 'Dinheiro' })
-      });
-      if (!response.ok) {
-        if (response.status === 401) {
-          showToast('Sua sessão expirou. Por favor, faça o login novamente.', 'warning');
-          logout();
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao marcar fiado como pago.');
-      }
-      showToast('Fiado pago com sucesso!', 'success');
-      fetchDebts();
-    } catch (err: any) {
-      showToast(err.message, 'danger');
-    }
+  const handleOpenPaymentModal = (debtor: Debtor) => {
+    setDebtorToPay(debtor);
+    setShowPaymentModal(true);
   };
 
-  const toggleExpand = (customerId: string) => {
-    setExpandedCustomerId(prevId => (prevId === customerId ? null : customerId));
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false);
+    fetchDebtsSummary();
   };
 
   if (loading) return <div className="text-center mt-5"><h4>Carregando fiados...</h4></div>;
   if (error) return <div className="container mt-4 alert alert-danger"><strong>Erro:</strong> {error}</div>;
 
   return (
-    <div className="container mt-4">
-      <h2 className="mb-4">Fiados Pendentes</h2>
-      {groupedDebts.length === 0 ? (
-        <div className="alert alert-info">Não há fiados pendentes no momento.</div>
-      ) : (
-        <div className="accordion" id="debtsAccordion">
-          {groupedDebts.map(groupedDebt => (
-            <div className="accordion-item" key={groupedDebt.customer._id}>
-              <h2 className="accordion-header">
-                <button 
-                  className={`accordion-button ${expandedCustomerId !== groupedDebt.customer._id ? 'collapsed' : ''}`} 
-                  type="button" 
-                  onClick={() => toggleExpand(groupedDebt.customer._id)}
-                >
-                  <span className="fw-bold me-auto">{groupedDebt.customer.name}</span>
-                  <span className="text-danger fw-bold">Total: R$ {groupedDebt.totalDebt.toFixed(2).replace('.', ',')}</span>
-                </button>
-              </h2>
-              <div 
-                className={`accordion-collapse collapse ${expandedCustomerId === groupedDebt.customer._id ? 'show' : ''}`}
-              >
-                <div className="accordion-body">
-                  <h6>Pedidos do Fiado:</h6>
-                  <ul className="list-group">
-                    {groupedDebt.individualDebts.map(debt => (
-                      <li key={debt._id} className="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                          Pedido de <span className="fw-bold">R$ {debt.amount.toFixed(2).replace('.', ',')}</span>
-                          <br />
-                          <small className="text-muted">Data: {new Date(debt.createdAt).toLocaleDateString('pt-BR')}</small>
-                        </div>
-                        <button
-                          className="btn btn-success btn-sm"
-                          onClick={() => handleMarkAsPaid(debt._id)}
-                          title="Marcar este fiado como Pago"
-                        >
-                          Pagar Este
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          ))}
+    <>
+      <div className="container mt-4">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+            <h2>Fiados Pendentes por Cliente</h2>
+            <button className="btn btn-secondary" onClick={fetchDebtsSummary} disabled={loading}>
+                <FontAwesomeIcon icon={faSyncAlt} className="me-2" />
+                Recarregar
+            </button>
         </div>
-      )}
-    </div>
+
+        {debtors.length === 0 ? (
+          <div className="alert alert-info">Não há fiados pendentes no momento.</div>
+        ) : (
+          <div className="table-responsive">
+            <table className="table table-hover align-middle">
+              <thead className="table-light">
+                <tr>
+                  <th>Cliente</th>
+                  <th className="text-end">Saldo Devedor Total</th>
+                  <th className="text-center">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {debtors.map(debtor => (
+                  <tr key={debtor.customerId}>
+                    <td className="fw-bold">{debtor.customerName}</td>
+                    <td className="text-end text-danger fw-bold">
+                      R$ {debtor.totalDebt.toFixed(2).replace('.', ',')}
+                    </td>
+                    <td className="text-center">
+                      <button 
+                        className="btn btn-success btn-sm"
+                        onClick={() => handleOpenPaymentModal(debtor)}
+                        disabled={debtor.totalDebt <= 0}
+                      >
+                        <FontAwesomeIcon icon={faDollarSign} className="me-2" />
+                        Pagar / Abater
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <PartialPaymentModal
+        key={debtorToPay?.customerId || 'initial'}
+        debt={debtorToPay}
+        show={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSave={handlePaymentSuccess}
+      />
+    </>
   );
 };
 

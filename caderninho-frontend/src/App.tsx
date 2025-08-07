@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAppContext } from './context/AppContext';
-import ToastNotification from './components/ToastNotification';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faChartLine, faBoxOpen, faUsers, faReceipt, 
@@ -11,8 +10,9 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 function App() {
-  const { logout, username, userRole, userToken, establishmentName, toasts, removeToast } = useAppContext();
+  const { logout, username, userRole, userToken, establishmentName } = useAppContext();
   const [isNavCollapsed, setIsNavCollapsed] = useState(true);
+
   const handleNavCollapse = () => setIsNavCollapsed(!isNavCollapsed);
 
   return (
@@ -50,9 +50,6 @@ function App() {
         </div>
       </nav>
       <main className="flex-grow-1 p-4"><Outlet /></main>
-      <footer className="toast-container position-fixed bottom-0 end-0 p-3" style={{ zIndex: 11 }}>
-        {toasts.map((toast) => (<ToastNotification key={toast.id} toast={toast} onClose={removeToast} />))}
-      </footer>
     </div>
   );
 }
