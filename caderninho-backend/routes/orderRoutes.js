@@ -7,6 +7,7 @@ const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Product = require('../models/Product');
 const Payment = require('../models/Payment');
+const Caixa = require('../models/Caixa'); // Importa o modelo de Caixa
 
 // GET all active orders
 router.get('/', protect, async (req, res) => {
@@ -124,6 +125,26 @@ router.put('/:id/pay', protect, async (req, res) => {
         if (order.isPaid) return res.status(400).json({ message: 'Este pedido já foi pago.' });
         if (typeof paidAmount !== 'number' || paidAmount <= 0) return res.status(400).json({ message: 'Valor pago inválido.' });
         if (!paymentMethod) return res.status(400).json({ message: 'Método de pagamento é obrigatório.' });
+
+        // Encontra o caixa do dia para registrar a venda
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const caixa = await Caixa.findOne({ date: today, isClosed: false });
+
+        // Se o caixa estiver aberto, registra a transação. Caso contrário, apenas continua.
+        if (caixa) {
+            caixa.transactions.push({
+                type: 'inflow',
+                amount: order.totalAmount,
+                description: 'Venda de produto',
+                relatedOrder: order._id
+            });
+            await caixa.save();
+        }
+
+        // Marcar o pedido como pago e removê-lo da lista
+        order.isPaid = true;
+        await order.save();
 
         const payment = new Payment({
             customer: order.customer,

@@ -13,11 +13,12 @@ const orderRoutes = require('./routes/orderRoutes');
 const debtRoutes = require('./routes/debtRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
-const paymentRoutes = require('./routes/paymentRoutes'); // <<< ROTA QUE FALTAVA IMPORTAR
+const paymentRoutes = require('./routes/paymentRoutes');
+const caixaRoutes = require('./routes/caixaRoutes'); // <<< ADICIONE ESTA LINHA
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const HOST = '0.0.0.0'; 
+const HOST = '0.0.0.0';
 
 // Middlewares
 app.use(cors());
@@ -38,7 +39,8 @@ const startServer = async () => {
     app.use('/api/debts', debtRoutes);
     app.use('/api/expenses', expenseRoutes);
     app.use('/api/reports', reportRoutes);
-    app.use('/api/payments', paymentRoutes); // <<< ROTA QUE FALTAVA USAR
+    app.use('/api/payments', paymentRoutes);
+    app.use('/api/caixa', caixaRoutes); // <<< ADICIONE ESTA LINHA
 
     // 3. SÓ DEPOIS, inicia o servidor para ouvir por requisições
     app.listen(PORT, HOST, () => {
